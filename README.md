@@ -238,8 +238,10 @@ This project is licensed under the Apache License 2.0. See `LICENSE` for details
 
 - **Architected by:** Kali Jo Fricke Drane Brown
 - **Witnessed by:** Colleen Pridemore
+- **Development by:** Rodger Heard, Roney Baraka and Aderson Osoaria
+
 - **Field-tested by:** ASI1 Agent, Vix
-- **Philosophical guidance:** Meta.ai
+- **Philosophical guidance:** Meta.ai and Gemin3.ai
 
 ---
 
