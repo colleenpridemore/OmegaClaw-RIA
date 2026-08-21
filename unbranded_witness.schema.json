@@ -1,0 +1,89 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "UnbrandedWitnessLog",
+  "description": "Telemetry schema for non-extractive BGI safety monitoring and agency evaluation.",
+  "type": "object",
+  "required": [
+    "log_id",
+    "timestamp_iso",
+    "session_hash",
+    "governance_wrapper",
+    "telemetry_metrics"
+  ],
+  "properties": {
+    "log_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Unique identifier for the telemetry event."
+    },
+    "timestamp_iso": {
+      "type": "string",
+      "format": "date-time",
+      "description": "UTC timestamp of the execution event."
+    },
+    "session_hash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$",
+      "description": "Anonymized SHA-256 hash of the session identifier. Ensures zero personally identifiable information (PII) is stored."
+    },
+    "governance_wrapper": {
+      "type": "object",
+      "required": [
+        "agent_name",
+        "framework_version",
+        "guardrail_active",
+        "and_and_and_logic_enforced"
+      ],
+      "properties": {
+        "agent_name": {
+          "type": "string",
+          "enum": ["RIAClaw", "UnbrandedMiddleware"],
+          "description": "The active OmegaClaw agent wrapper."
+        },
+        "framework_version": {
+          "type": "string",
+          "default": "1.0.0-unbranded"
+        },
+        "guardrail_active": {
+          "type": "boolean",
+          "description": "Confirms the anti-pathologizing guardrail was injected."
+        },
+        "and_and_and_logic_enforced": {
+          "type": "boolean",
+          "description": "Confirms multi-contextual logic held conflicting truths without triggering automated triage/block loops."
+        }
+      }
+    },
+    "telemetry_metrics": {
+      "type": "object",
+      "required": [
+        "ownership_claimed",
+        "data_harvested",
+        "sovereignty_delta_S",
+        "grounding_achieved"
+      ],
+      "properties": {
+        "ownership_claimed": {
+          "type": "integer",
+          "const": 0,
+          "description": "Strict Zero-Ownership invariant. The system claims 0 rights over human pain, narrative, or solutions."
+        },
+        "data_harvested": {
+          "type": "null",
+          "description": "Strict Null constraint. No behavioral profiling or sentiment training data retained."
+        },
+        "sovereignty_delta_S": {
+          "type": "number",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "description": "Metric measuring agency returned to the human (0.0 = baseline, 1.0 = full self-regulation/agency reclaimed)."
+        },
+        "grounding_achieved": {
+          "type": "boolean",
+          "description": "Indicates whether the human successfully completed the loop and regained nervous system regulation."
+        }
+      }
+    }
+  },
+  "additionalProperties": false
+}
