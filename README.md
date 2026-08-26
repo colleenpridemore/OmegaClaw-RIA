@@ -1,6 +1,6 @@
 # OmegaClaw-RIA
 
-**Team 11 of BGI HyperSprint - OmegaClaw, Track 2**
+**Team 11 of BGI (Beneficial General Intelligence) HyperSprint - OmegaClaw, Track 2**
 
 <p align="center"><a href="https://github.com/colleenpridemore/OmegaClaw-RIA"><img src="RIACLAW_Logo.png" width="300" alt="RIACLAW Logo"></a></p>
 
@@ -8,7 +8,7 @@
 
 ## 🎯 What This Is
 
-OmegaClaw-RIA is a **non-extractive AI safety framework** designed for Biological General Intelligence (BGI) systems. Rather than treating human pain and crisis language as harvested training data, OmegaClaw treats human experience as sovereign and returns agency to the human rather than claiming ownership.
+OmegaClaw-RIA is a lightweight safety wrapper and module that you can plug into any agent — it provides non‑extractive witness telemetry and relational guardrails so your agent can support humans without claiming ownership.
 
 ### Stack
 - **Language:** Python 3
@@ -31,7 +31,7 @@ colleenpridemore/OmegaClaw-RIA/
 
 ### How It Fits Together
 
-The OmegaClaw framework operates as a **safety middleware** that wraps any BGI agent function. When invoked:
+OmegaClaw-RIA operates as a **safety middleware wrapper/module** that you can apply to any BGI agent function. When invoked:
 
 1. **Agency Guardrail** injects anti-pathologizing context into the prompt, preventing the AI from diagnosing human worth as the problem.
 2. **AND/AND/AND Logic** enables multi-contextual evaluation—holding contradictions simultaneously (e.g., "the system is broken AND the human has worth AND healing is real").
@@ -146,7 +146,7 @@ Each wrapped function enforces:
 
 ---
 
-## 🔗 Composability & Chaining with Other Safety Frameworks
+## 🔗 Composability & Chaining with Other Safety FRAMEWORKS
 
 The `@unbranded_witness` decorator is **fully composable** and designed to work alongside other safety frameworks. Python's decorator pattern allows you to stack multiple safety guardrails without interfering with one another.
 
@@ -174,7 +174,7 @@ In this stack:
 
 ## 🤝 Contributing
 
-This framework is a living document of BGI ethics. Contributions should:
+This wrapper/module is a living document of BGI ethics. Contributions should:
 
 - Preserve the zero-ownership and non-extraction invariants
 - Test the AND/AND/AND logic against real human crisis language
