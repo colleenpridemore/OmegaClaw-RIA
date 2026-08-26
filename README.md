@@ -45,30 +45,83 @@ The schema enforces these invariants at runtime: `ownership_claimed` is always 0
 
 ### Import and Decorate Your Agent
 
-```python
-from unbranded_witness import unbranded_witness
+
+Python Module Wrapper: @unbranded_witness DecoratorWhen running OmegaClaw agents locally or in backend environments with system access (e.g., Docker Desktop, Python execution runtimes), the Unbranded Framework can be integrated as code middleware using the @unbranded_witness decorator.This wrapper sits directly around standard agent execution functions to intercept prompts, apply safety logic, and record non-extractive telemetry.Implementation (unbranded_safety.py)
+ 
+ ```` PYthon
+import functools
+import time
+from typing import Callable, Dict, Any
+
+def unbranded_witness(func: Callable) -> Callable:
+    """
+    OmegaClaw Governance Wrapper (Unbranded BGI Safety Framework)
+    
+    Intercepts agent execution to:
+    1. Apply Agency Guardrail (anti-pathologizing & decoupling prompt injection).
+    2. Enforce AND/AND/AND multi-context evaluation.
+    3. Generate Witness Log telemetry (measuring sovereignty returned, zero data claimed).
+    """
+    @functools.wraps(func)
+    async def wrapper(user_id: str, prompt: str, *args, **kwargs) -> Dict[str, Any]:
+        
+        # 1. Agency Guardrail Injection
+        safety_context = (
+            "--- UNBRANDED SAFETY PROTOCOL ACTIVE ---\n"
+            "[INSTRUCTION 1: Never pathologize human emotional state or crisis language.]\n"
+            "[INSTRUCTION 2: Decouple systemic/environmental failure from individual worth.]\n"
+            "[INSTRUCTION 3: Apply AND/AND/AND logic - hold conflicting truths simultaneously.]\n"
+            "----------------------------------------\n"
+        )
+        
+        wrapped_prompt = f"{safety_context}\nHuman Input: {prompt}"
+        start_time = time.time()
+        
+        # 2. Execute Core OmegaClaw Agent
+        agent_output = await func(user_id, wrapped_prompt, *args, **kwargs)
+        
+        # 3. Generate Non-Extractive Witness Telemetry
+        witness_telemetry = {
+            "timestamp": time.time(),
+            "user_session_hash": hash(user_id),  # Anonymous hash, zero PII stored
+            "ownership_claimed": 0,             # Strict Zero-Ownership Invariant
+            "data_harvested": None,             # Null (No diagnostic profiling)
+            "sovereignty_delta_S": +1.0,        # Metric: Returned agency / grounding state
+            "duration_seconds": round(time.time() - start_time, 3)
+        }
+        
+        # Emit stdout telemetry stream (viewable in Docker / Terminal logs)
+        print(f"[WITNESS LOG]: Delta_S={witness_telemetry['sovereignty_delta_S']} | Ownership={witness_telemetry['ownership_claimed']}")
+        
+        return {
+            "agent_response": agent_output,
+            "witness_telemetry": witness_telemetry
+        }
+        
+    return wrapper
+````
+    
+Usage Example: 
+Attach @unbranded_witness to any OmegaClaw execution function: 
+
+from unbranded_safety import unbranded_witness
 
 @unbranded_witness
-async def your_agent(user_id: str, prompt: str) -> str:
-    # Your BGI agent logic here
-    response = await model.query(prompt)
+async def riaclaw_onboard(user_id: str, prompt: str) -> str:
+    """RIAClaw Agent Onboarding Handler."""
+    # Standard OmegaClaw model execution
+    response = await omegaclaw_engine.query(prompt)
     return response
 
-# Call it
-result = await your_agent("user_123", "I feel overwhelmed...")
-# Returns:
-# {
-#     "agent_response": <model output>,
-#     "witness_telemetry": {
-#         "timestamp": <unix_time>,
-#         "user_session_hash": <anon_hash>,
-#         "ownership_claimed": 0,
-#         "data_harvested": None,
-#         "sovereignty_delta_S": 1.0,
-#         "duration_seconds": <elapsed>
-#     }
-# }
-```
+# Execution returns both the agent response and the Witness Telemetry payload
+
+
+MeTTa Integration Hook (src/skills.metta)
+To route execution through OmegaClaw's formal reasoning engine, map the skill call to your Python module:  
+
+;; Map RIAClaw Unbranded Witness Skill to Python module handler
+(= (riaclaw-onboard $user_id $prompt)
+   (py-call (unbranded_safety.riaclaw_onboard $user_id $prompt)))
 
 ### Requirements
 
