@@ -119,7 +119,7 @@ def unbranded_witness(func: Callable) -> Callable:
 ```
     
 Usage Example: 
-Attach @unbranded_witness to any OmegaClaw execution function: 
+Attach unbranded_witness to any OmegaClaw execution function: 
 
 ````Python
 
