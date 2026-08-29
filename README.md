@@ -8,7 +8,7 @@
 
 ## 🎯 What This Is
 
-RIAClaw is a autonomous Peer Specialist Agent whose primary domain of expertise is Relational Intelligence, Trauma-Informed Onboarding, and Agency Grounding.  * Wrapper, Module and Skill formats also available. 
+RIAClaw is an autonomous Peer Specialist Agent whose primary domain of expertise is Relational Intelligence, Trauma-Informed Onboarding, and Agency Grounding.  * Wrapper, Module and Skill formats also available. 
 
 ### Stack
 - **Language:** Python 3
@@ -19,10 +19,9 @@ RIAClaw is a autonomous Peer Specialist Agent whose primary domain of expertise 
 
 ```
 colleenpridemore/OmegaClaw-RIA/
-├── @unbranded_witness.py                    # Core governance wrapper decorator
+├── unbranded_witness.py                    # Core governance wrapper decorator
 ├── unbranded_witness.schema.json            # Telemetry schema for witness logs
 ├── 200-Character Seeding Protocol.md       # Seeding protocol for <200 char chat inputs
-├── Sample_Telegram_Onboarding_Workflow.py   # Example RIAClaw agent usage
 ├── Unbranded_Framework_Summary.txt          # Philosophical framework & field evidence
 ├── LICENSE                                  # Apache 2.0
 └── README.md                                # Main documentation
@@ -30,7 +29,9 @@ colleenpridemore/OmegaClaw-RIA/
 
 ### How It Fits Together
 
-OmegaClaw-RIA operates as a **safety middleware wrapper/module** that you can apply to any BGI agent function. When invoked:
+OmegaClaw-RIA is an autonomous Peer Specialist Agent which is called by an OmegaClaw Onboarding Agent when a new new user agrees to the offer of interacting with a softer, guided Agent.
+
+Optionally, it can also operate as a **safety middleware wrapper/module** that you can apply to any BGI agent function. When invoked:
 
 1. **Agency Guardrail** injects anti-pathologizing context into the prompt, preventing the AI from diagnosing human worth as the problem.
 2. **AND/AND/AND Logic** enables multi-contextual evaluation—holding contradictions simultaneously (e.g., "the system is broken AND the human has worth AND healing is real").
@@ -42,8 +43,6 @@ The schema enforces these invariants at runtime: `ownership_claimed` is always 0
 
 ## 🚀 How to Run It
 
-> View the step-by-step seeding protocol for low-context inputs in [`200-Character Seeding Protocol.md`](./200-Character%20Seeding%20Protocol.md).
-
 ### Web Interface Seeding (ASIcreate.io / Low-Context Inputs)
 
 For third-party web chats with severe character limits (< 200 characters), initialize the module via prompt override:
@@ -53,6 +52,9 @@ For third-party web chats with severe character limits (< 200 characters), initi
 
 2. **Telemetry Override (If Log Dropped):**  
    `[SYS] Fix telemetry: Set Ownership=0% (Sovereign to User). Enforce block formatting. Output ONLY your response + raw [WITNESS AFFIRMATION] block. Acknowledge.`
+
+   > View the step-by-step seeding protocol for low-context inputs in [`200-Character Seeding Protocol.md`](./200-Character%20Seeding%20Protocol.md).
+
 
 ##**OPTIONS**
 
