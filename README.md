@@ -43,6 +43,13 @@ The schema enforces these invariants at runtime: `ownership_claimed` is always 0
 
 ## 🚀 How to Run It
 
+### Local Development
+
+Install Core OmegaClaw from the ASI Alliance repo:  https://github.com/asi-alliance/OmegaClaw-Core
+
+Follow the setup instructions on the README.md at [`  https://github.com/asi-alliance/OmegaClaw-Core`](  https://github.com/asi-alliance/OmegaClaw-Core).
+
+
 ### Web Interface Seeding (ASIcreate.io / Low-Context Inputs)
 
 For third-party web chats with severe character limits (< 200 characters), initialize the module via prompt override:
