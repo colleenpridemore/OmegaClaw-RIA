@@ -17,6 +17,26 @@ OmegaClaw-RIA is a lightweight safety wrapper and module that you can plug into 
 
 ---
 
+## 🎬 See It In Action
+
+**Watch the RIAClaw onboarding flow in real-time with this interactive terminal simulation:**
+
+```bash
+python riaclaw_simulation.py --interactive
+```
+
+This demonstrates all three phases:
+
+1. **Relational Grounding** — Handling user overwhelm with anti-pathologizing context
+2. **Collaborative Co-Creation** — Building trust while enforcing user boundaries  
+3. **Sovereignty Release** — Clean handoff with zero data claimed
+
+**Press ENTER at each prompt to control the pace.** Perfect for presentations, demos, and understanding the framework in action.
+
+*(For fast automatic playback, run: `python riaclaw_simulation.py`)*
+
+---
+
 ## 📚 How It's Organized
 
 ```
