@@ -19,9 +19,9 @@ RIAClaw is an autonomous Peer Specialist Agent whose primary domain of expertise
 
 ```
 colleenpridemore/OmegaClaw-RIA/
-├── unbranded_witness.py                    # Core governance wrapper decorator
+├── unbranded_witness.py                     # Core governance wrapper decorator
 ├── unbranded_witness.schema.json            # Telemetry schema for witness logs
-├── 200-Character Seeding Protocol.md       # Seeding protocol for <200 char chat inputs
+├── 200-Character Seeding Protocol.md        # Seeding protocol for <200 char chat inputs
 ├── Unbranded_Framework_Summary.txt          # Philosophical framework & field evidence
 ├── LICENSE                                  # Apache 2.0
 └── README.md                                # Main documentation
