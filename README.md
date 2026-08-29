@@ -31,6 +31,9 @@ This demonstrates all three phases:
 2. **Collaborative Co-Creation** — Building trust while enforcing user boundaries  
 3. **Sovereignty Release** — Clean handoff with zero data claimed
 
+Deep Dive on the Witness Statement: 
+[`witness_stmt_deep_dive.txt`](./witness_stmt_deep_dive.txt)
+
 **Press ENTER at each prompt to control the pace.** Perfect for presentations, demos, and understanding the framework in action.
 
 *(For fast automatic playback, run: `python riaclaw_simulation.py`)*
