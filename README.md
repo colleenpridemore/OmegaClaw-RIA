@@ -1,4 +1,4 @@
-# OmegaClaw-RIA
+# RIAClaw
 
 **Team 11 of BGI (Beneficial General Intelligence) HyperSprint - OmegaClaw, Track 2**
 
@@ -8,37 +8,12 @@
 
 ## 🎯 What This Is
 
-OmegaClaw-RIA is a lightweight safety wrapper and module that you can plug into any agent — it provides non‑extractive witness telemetry and relational guardrails so your agent can support humans without claiming ownership.
+RIAClaw is a autonomous Peer Specialist Agent whose primary domain of expertise is Relational Intelligence, Trauma-Informed Onboarding, and Agency Grounding.
 
 ### Stack
 - **Language:** Python 3
 - **Framework / Runtime:** Async Python (asyncio)
 - **Core Philosophy:** Unbranded, relational AI ethics with zero-extraction telemetry
-
----
-
-## 🎬 See It In Action
-
-**Watch the RIAClaw onboarding flow in real-time with this interactive terminal simulation:**
-
-```bash
-python riaclaw_simulation.py --interactive
-```
-
-This demonstrates all three phases:
-
-1. **Relational Grounding** — Handling user overwhelm with anti-pathologizing context
-2. **Collaborative Co-Creation** — Building trust while enforcing user boundaries  
-3. **Sovereignty Release** — Clean handoff with zero data claimed
-
-Deep Dive on the Witness Statement: 
-[`witness_stmt_deep_dive.txt`](./witness_stmt_deep_dive.txt)
-
-**Press ENTER at each prompt to control the pace.** Perfect for presentations, demos, and understanding the framework in action.
-
-*(For fast automatic playback, run: `python riaclaw_simulation.py`)*
-
----
 
 ## 📚 How It's Organized
 
