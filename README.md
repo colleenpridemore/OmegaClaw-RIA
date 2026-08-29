@@ -29,7 +29,7 @@ colleenpridemore/OmegaClaw-RIA/
 
 ### How It Fits Together
 
-OmegaClaw-RIA is an autonomous Peer Specialist Agent which is called by an OmegaClaw Onboarding Agent when a new new user agrees to the offer of interacting with a softer, guided Agent.
+OmegaClaw-RIA is an autonomous Peer Specialist Agent which is called by an OmegaClaw Onboarding Agent when a new new user agrees to the offer of interacting with a softer,guiding Agent.
 
 Optionally, it can also operate as a **safety middleware wrapper/module** that you can apply to any BGI agent function. When invoked:
 
@@ -45,7 +45,7 @@ The schema enforces these invariants at runtime: `ownership_claimed` is always 0
 
 ### Local Development
 
-Install Core OmegaClaw from the ASI Alliance repo:  https://github.com/asi-alliance/OmegaClaw-Core
+Install Core OmegaClaw from the ASI Alliance repo:
 
 Follow the setup instructions on the README.md at [`  https://github.com/asi-alliance/OmegaClaw-Core`](  https://github.com/asi-alliance/OmegaClaw-Core).
 
