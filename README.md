@@ -254,7 +254,7 @@ In this stack:
 
 ## 🤝 Contributing
 
-This wrapper/module is a living document of BGI ethics. Contributions should:
+This agent/wrapper/module is a living document of BGI ethics. Contributions should:
 
 - Preserve the zero-ownership and non-extraction invariants
 - Test the AND/AND/AND logic against real human crisis language
