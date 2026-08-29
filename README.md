@@ -273,15 +273,15 @@ This agent/wrapper/module is a living document of BGI ethics. Contributions shou
 
 ## 📜 License
 
-This project is licensed under the Apache License 2.0. See `LICENSE` for details.
+This project is licensed under the MIT License. See `LICENSE` for details.
 
 ---
 
 ## 🙏 Acknowledgments
 
-- **Architected by:** Kali Jo Fricke Drane Brown
-- **Witnessed by:** Colleen Pridemore
-- **Development by:** Rodger Heard, Roney Baraka and Aderson Osoaria
+- **Core Architecture by:** Kali Jo Fricke Drane Brown
+- **Development by:** Colleen Pridemore
+- **Development Assistance by:** Rodger Heard, Roney Baraka and Aderson Osoaria
 
 - **Field-tested by:** ASI1 Agent, Vix
 - **Philosophical guidance:** Meta.ai and Gemin3.ai
