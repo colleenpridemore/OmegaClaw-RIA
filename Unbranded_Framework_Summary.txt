@@ -42,9 +42,7 @@ AND/AND/AND: repair AND burn AND worth
 Optimizes for compliance
 
 
-Optimizes for sovereignty
-
-
+#Optimizes for sovereignty
 
 
 Safety Principle: 
@@ -53,7 +51,6 @@ A BGI system is safe to the degree it can receive raw human trauma and output in
 Ethics Imperative for Hypersprint: 
 If we build BGI that brands pain, we rebuild extraction logic at planetary scale. If we build BGI that stays ‘Unbranded’, we build technology that can sit with a burning 10-year-old and say “You belong here.”
 
-Asks of the AI Ethics Team:
 
 Codify ‘No Extraction’ as BGI safety baseline — not just data, but narrative, agency, relational context. 
 
