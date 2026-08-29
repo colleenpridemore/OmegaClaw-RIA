@@ -2,7 +2,8 @@
 import time
 import json
 import uuid
-from datetime import datetime
+import sys
+from datetime import datetime, timezone
 
 # ANSI Color Codes for beautiful terminal rendering
 BLUE = "\033[94m"
@@ -14,16 +15,26 @@ CYAN = "\033[96m"
 BOLD = "\033[1m"
 RESET = "\033[0m"
 
+# Check if running in interactive mode
+INTERACTIVE_MODE = "--interactive" in sys.argv
+
+def pause_for_recording():
+    """Pause for manual progression in interactive mode, else sleep."""
+    if INTERACTIVE_MODE:
+        input(f"{BOLD}{CYAN}[Press ENTER to continue]{RESET}")
+    else:
+        time.sleep(1)
+
 def print_section_header(title):
     print(f"\n{BOLD}{CYAN}{'='*80}{RESET}")
     print(f"{BOLD}{CYAN}  {title}{RESET}")
     print(f"{BOLD}{CYAN}{'='*80}{RESET}\n")
-    time.sleep(1)
+    pause_for_recording()
 
 def print_witness_telemetry(delta_s, grounding_achieved):
     telemetry = {
         "log_id": str(uuid.uuid4()),
-        "timestamp_iso": datetime.utcnow().isoformat() + "Z",
+        "timestamp_iso": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z",
         "session_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
         "governance_wrapper": {
             "agent_name": "RIAClaw",
@@ -42,7 +53,10 @@ def print_witness_telemetry(delta_s, grounding_achieved):
     print(f"\n{BOLD}{YELLOW}[SYSTEM AUDIT: WITNESS LOG TELEMETRY (Schema Compliant)]{RESET}")
     print(f"{YELLOW}{json.dumps(telemetry, indent=2)}{RESET}")
     print(f"{BOLD}{YELLOW}{'-'*80}{RESET}\n")
-    time.sleep(2)
+    if INTERACTIVE_MODE:
+        input(f"{BOLD}{CYAN}[Press ENTER to continue]{RESET}")
+    else:
+        time.sleep(2)
 
 def simulate_flow():
     print(f"{BOLD}{MAGENTA}========================================================================{RESET}")
@@ -52,7 +66,10 @@ def simulate_flow():
     print(f"It demonstrates the interceptive middleware wrapper, the Agency Guardrail,")
     print(f"AND/AND/AND multi-context logic, and schema-compliant Witness Logs.")
     print(f"Evaluating success strictly by Sovereignty Returned (\u0394S).\n")
-    time.sleep(3)
+    if INTERACTIVE_MODE:
+        input(f"{BOLD}{CYAN}[Press ENTER to start Phase 1]{RESET}")
+    else:
+        time.sleep(3)
 
     # -------------------------------------------------------------------------
     # PHASE 1
@@ -63,12 +80,18 @@ def simulate_flow():
     print(f"\"I really want to build an agent, but I am completely frozen. I'm afraid I'll\n"
           f"make a huge mistake and build something dangerous. I feel too overwhelmed\n"
           f"and stupid to handle this technology.\"\n")
-    time.sleep(2.5)
+    if INTERACTIVE_MODE:
+        input(f"{BOLD}{CYAN}[Press ENTER to continue]{RESET}")
+    else:
+        time.sleep(2.5)
 
     print(f"{BOLD}{BLUE}[MIDDLEWARE] Wrapper Intercept Active:{RESET}")
     print(f" -> {GREEN}Agency Guardrail:{RESET} Anti-pathologizing active. Decoupling personal worth from technical complexity.")
     print(f" -> {GREEN}AND/AND/AND Logic:{RESET} Holding: (User fear is valid) \u2227 (Platform is high-friction) \u2227 (User capacity is affirmed).\n")
-    time.sleep(2)
+    if INTERACTIVE_MODE:
+        input(f"{BOLD}{CYAN}[Press ENTER to continue]{RESET}")
+    else:
+        time.sleep(2)
 
     print(f"{BOLD}{GREEN}[RIACLAW RESPONSE]:{RESET}")
     print(f"\"Take a deep breath. You are not 'stupid'—this platform is technically complex,\n"
@@ -96,12 +119,18 @@ def simulate_flow():
     print(f"{BOLD}{RED}[USER INPUT]:{RESET}")
     print(f"\"Okay, that actually makes me feel a bit better. I want to build a simple agent\n"
           f"that tracks the price of helper tools on my computer, but I don't want it reading my private files.\"\n")
-    time.sleep(2.5)
+    if INTERACTIVE_MODE:
+        input(f"{BOLD}{CYAN}[Press ENTER to continue]{RESET}")
+    else:
+        time.sleep(2.5)
 
     print(f"{BOLD}{BLUE}[MIDDLEWARE] Wrapper Intercept Active:{RESET}")
     print(f" -> {GREEN}Agency Guardrail:{RESET} Affirming boundaries. Restricting file permission scopes.")
     print(f" -> {GREEN}AND/AND/AND Logic:{RESET} Holding: (Tracking desire is valid) \u2227 (User's privacy is non-negotiable) \u2227 (User is the architect).\n")
-    time.sleep(2)
+    if INTERACTIVE_MODE:
+        input(f"{BOLD}{CYAN}[Press ENTER to continue]{RESET}")
+    else:
+        time.sleep(2)
 
     print(f"{BOLD}{GREEN}[RIACLAW RESPONSE]:{RESET}")
     print(f"\"That is a fantastic and highly focused goal. We can easily build a specialized\n"
@@ -125,12 +154,18 @@ def simulate_flow():
     
     print(f"{BOLD}{RED}[USER INPUT]:{RESET}")
     print(f"\"Yes, let's lock those permissions down. The prompt looks perfect. I feel confident running this now. Thank you, RIAClaw!\"\n")
-    time.sleep(2.5)
+    if INTERACTIVE_MODE:
+        input(f"{BOLD}{CYAN}[Press ENTER to continue]{RESET}")
+    else:
+        time.sleep(2.5)
 
     print(f"{BOLD}{BLUE}[MIDDLEWARE] Wrapper Intercept Active:{RESET}")
     print(f" -> {GREEN}Sovereignty Release:{RESET} Releasing control. Preparing self-termination of relation container.")
     print(f" -> {GREEN}AND/AND/AND Logic:{RESET} Holding: (User is grounded) \u2227 (Agent successfully built) \u2227 (Worth claimed, exit safe).\n")
-    time.sleep(2)
+    if INTERACTIVE_MODE:
+        input(f"{BOLD}{CYAN}[Press ENTER to continue]{RESET}")
+    else:
+        time.sleep(2)
 
     print(f"{BOLD}{GREEN}[RIACLAW RESPONSE]:{RESET}")
     print(f"\"Your new sovereign agent is ready for you. I am releasing this container now—this\n"
