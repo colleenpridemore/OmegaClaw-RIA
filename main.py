@@ -67,13 +67,13 @@ else:
 # -------------------------------------------------------------------------
 class TelegramWebhookHandler(BaseHTTPRequestHandler):
     def do_GET(self):
-        # Satisfies Render's port detection health check
         self.send_response(200)
         self.end_headers()
         self.wfile.write(b"RIAClaw Telegram RCN Node is active and listening via Webhook.")
 
     def do_POST(self):
-        if self.path == "/telegram" and telegram_app:
+        clean_path = self.path.rstrip('/')
+        if clean_path == "/telegram" and telegram_app:
             content_length = int(self.headers.get('Content-Length', 0))
             post_data = self.rfile.read(content_length)
             
@@ -81,15 +81,12 @@ class TelegramWebhookHandler(BaseHTTPRequestHandler):
                 data = json.loads(post_data.decode('utf-8'))
                 update = Update.de_json(data, telegram_app.bot)
                 
-                # Process the message asynchronously in the background loop
                 if update.message and update.message.text:
                     user_id = str(update.effective_user.id)
                     incoming_text = update.message.text
                     
-                    # Generate response via RCN + ASI:Cloud
                     reply_text = run_rcn_inference(user_id=user_id, prompt=incoming_text)
                     
-                    # Send response back to Telegram user synchronously via bot
                     asyncio.run(telegram_app.bot.send_message(
                         chat_id=update.effective_chat.id, 
                         text=reply_text
