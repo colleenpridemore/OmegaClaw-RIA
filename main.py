@@ -67,6 +67,7 @@ else:
 # -------------------------------------------------------------------------
 class TelegramWebhookHandler(BaseHTTPRequestHandler):
     def do_GET(self):
+        # Satisfies Render's port detection health check
         self.send_response(200)
         self.end_headers()
         self.wfile.write(b"RIAClaw Telegram RCN Node is active and listening via Webhook.")
@@ -74,7 +75,6 @@ class TelegramWebhookHandler(BaseHTTPRequestHandler):
     def do_POST(self):
         print(f"📥 Incoming POST request path: {self.path}")
         
-        # Accept /telegram, /telegram/, or catch it flexibly
         content_length = int(self.headers.get('Content-Length', 0))
         post_data = self.rfile.read(content_length)
         
@@ -101,18 +101,15 @@ class TelegramWebhookHandler(BaseHTTPRequestHandler):
                 return
             except Exception as e:
                 print("⚠️ Error processing Telegram webhook payload:", e)
-        
-        # If something didn't match or app isn't ready
-        self.send_response(200)  # Return 200 so Telegram doesn't spam retries while debugging
-        self.end_headers()
-        self.wfile.write(b"Received, but check server logs.")
-            except Exception as e:
-                print("⚠️ Error processing Telegram webhook payload:", e)
                 self.send_response(500)
                 self.end_headers()
-        else:
-            self.send_response(404)
-            self.end_headers()
+                self.wfile.write(b"Internal Error")
+                return
+        
+        # Fallback if telegram_app is not initialized
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write(b"Received, but telegram_app is not configured.")
 
 def run_server():
     port = int(os.environ.get("PORT", 10000))
