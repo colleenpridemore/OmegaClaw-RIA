@@ -112,11 +112,22 @@ def run_server():
     print(f"🌐 Unified Webhook & Health server listening on port {port}...")
     server.serve_forever()
 
+# -------------------------------------------------------------------------
+# 4. Main Execution Loop & Initialization (Thread-Safe Event Loop)
+# -------------------------------------------------------------------------
 if __name__ == "__main__":
     print("🚀 RIAClaw RCN Telegram Node initializing...")
+    
     if telegram_app:
-        # Initialize the telegram application components
-        asyncio.get_event_loop().run_until_complete(telegram_app.initialize())
+        async def init_bot():
+            await telegram_app.initialize()
+        
+        try:
+            asyncio.run(init_bot())
+        except RuntimeError:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            loop.run_until_complete(init_bot())
     
     # Start the HTTP server capturing Render traffic
     run_server()
