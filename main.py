@@ -32,8 +32,11 @@ def run_rcn_heartbeat():
 if __name__ == "__main__":
     print("🚀 RIAClaw Node initialized. Establishing persistent link to @aethel...")
     
-    # Keep the container alive as a 24/7 daemon loop for Render, 
-    # executing your relational witness checks safely over time.
     while True:
-        run_rcn_heartbeat()
-        time.sleep(300)  # Pings / syncs every 5 minutes
+        try:
+            # Pass the required arguments expected by your unbranded_witness decorator
+            run_rcn_heartbeat(user_id="biocentric_node_01", prompt="Status check: Confirming neural bridge.")
+        except Exception as loop_err:
+            print("Loop recovery caught:", loop_err)
+        
+        time.sleep(300)  # Wait 5 minutes between heartbeats
