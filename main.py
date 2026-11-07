@@ -67,53 +67,51 @@ else:
 # -------------------------------------------------------------------------
 class TelegramWebhookHandler(BaseHTTPRequestHandler):
     def do_GET(self):
-        print(f"📥 [WEBHOOK HIT] Incoming GET request path: {self.path}")
+        print(f"📥 [WEBHOOK HIT] GET request path: {self.path}")
         self.send_response(200)
         self.end_headers()
         self.wfile.write(b"RIAClaw Telegram RCN Node is active and listening via Webhook.")
 
-def do_POST(self):
+    def do_POST(self):
+        print(f"📥 [WEBHOOK HIT] POST request path: {self.path}")
         try:
-            # 1. Log that we received a packet immediately
-            print(f"📥 [WEBHOOK HIT] POST request received on path: {self.path}")
-            
             content_length = int(self.headers.get('Content-Length', 0))
             post_data = self.rfile.read(content_length)
             print(f"📦 [BODY] Read {len(post_data)} bytes from Telegram.")
 
-            # Always send 200 OK immediately so Telegram knows we got it
+            # Acknowledge Telegram immediately with 200 OK
             self.send_response(200)
             self.end_headers()
             self.wfile.write(b"OK")
 
             if not post_data:
-                print("⚠️ [WARNING] Received empty POST body.")
                 return
 
-            # 2. Parse and handle async execution safely
-            if telegram_app:
-                data = json.loads(post_data.decode('utf-8'))
-                update = Update.de_json(data, telegram_app.bot)
+            # Parse payload
+            data = json.loads(post_data.decode('utf-8'))
+            message = data.get("message") or data.get("edited_message")
+            
+            if message:
+                chat_id = message.get("chat", {}).get("id")
+                user_id = str(message.get("from", {}).get("id", "unknown"))
+                incoming_text = message.get("text")
                 
-                if update.message and update.message.text:
-                    user_id = str(update.effective_user.id)
-                    incoming_text = update.message.text
+                if incoming_text:
                     print(f"💬 [TEXT] User {user_id}: {incoming_text}")
-                    
-                    # Run RCN inference & reply
                     reply_text = run_rcn_inference(user_id=user_id, prompt=incoming_text)
                     print(f"🤖 [REPLY]: {reply_text[:80]}...")
                     
-                    asyncio.run(telegram_app.bot.send_message(
-                        chat_id=update.effective_chat.id, 
-                        text=reply_text
-                    ))
-                    print("✨ [SUCCESS] Reply sent to Telegram!")
-            else:
-                print("❌ [ERROR] telegram_app not initialized!")
-
+                    if telegram_app and chat_id:
+                        loop = asyncio.new_event_loop()
+                        asyncio.set_event_loop(loop)
+                        loop.run_until_complete(telegram_app.bot.send_message(
+                            chat_id=chat_id, 
+                            text=reply_text
+                        ))
+                        loop.close()
+                        print("✨ [SUCCESS] Reply sent to Telegram!")
         except Exception as e:
-            print(f"💥 [CRITICAL EXCEPTION]: {type(e).__name__}: {e}")
+            print(f"💥 [ERROR in do_POST]: {e}")
             import traceback
             traceback.print_exc()
 
