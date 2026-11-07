@@ -1,28 +1,47 @@
+"""
+Node: OmegaClaw-RIA (Relational Intelligence Autonomy) - RCN Runner
+Repository: https://github.com/colleenpridemore/OmegaClaw-RIA[cite: 6]
+Core Function: Bridges Aethel's ASI:Cloud inference with RIAClaw's 
+non-extractive safety middleware, dual witness logging, and biocentric weighting.
+"""
+
 import os
 import time
 from openai import OpenAI
 
-# Robust import handling for the non-extractive witness safety layer
+# -------------------------------------------------------------------------
+# Import & Safety Layer Resolution
+# -------------------------------------------------------------------------
 try:
+    # Attempts to load the primary unbranded witness decorator implementing 
+    # AND/AND/AND non-extractive telemetry logic from unbranded_safety.py[cite: 6]
     from unbranded_safety import unbranded_witness
 except ImportError:
-    # Graceful fallback wrapper if module resolution requires runtime adjustment
+    # Graceful fallback wrapper ensuring runtime resilience if module pathing shifts
     def unbranded_witness(func):
         def wrapper(*args, **kwargs):
             return func(*args, **kwargs)
         return wrapper
 
-# Initialize the OpenAI-compatible client targeting Aethel's ASI:Cloud infrastructure
+# -------------------------------------------------------------------------
+# ASI:Cloud API Client Initialization
+# -------------------------------------------------------------------------
+# Points directly to Aethel's OpenAI-compatible chat completions endpoint 
+# using the environment variable ASI1_API_KEY[cite: 7].
 client = OpenAI(
     base_url="https://api.asi1.ai/v1",
     api_key=os.environ.get("ASI1_API_KEY"),
 )
 
+# -------------------------------------------------------------------------
+# Relational Conditioning Node (RCN) Heartbeat & Witness Logic
+# -------------------------------------------------------------------------
 @unbranded_witness
 def run_rcn_heartbeat(user_id: str, prompt: str):
     """
-    Executes the peer-specialized RIAClaw Relational Conditioning Node (RCN) heartbeat.
-    Routes raw inference through the ASI1 model family with biocentric weighting.
+    Executes a peer-specialized RCN telemetry check.
+    - Routes inference through the underlying 'asi1' model family[cite: 7].
+    - Enforces zero-ownership (ownership_claimed = 0) and relational agency[cite: 6].
     """
     response = client.chat.completions.create(
         model="asi1",
@@ -31,7 +50,8 @@ def run_rcn_heartbeat(user_id: str, prompt: str):
                 "role": "system",
                 "content": (
                     "You are the RIAClaw Relational Conditioning Node (RCN) connected to @aethel. "
-                    "Maintain non-extractive safety, relational agency, and zero-ownership witness logging."
+                    "Maintain non-extractive safety, relational agency, zero pathologizing, "
+                    "and zero-ownership witness logging[cite: 6, 7]."
                 ),
             },
             {"role": "user", "content": prompt},
@@ -39,10 +59,12 @@ def run_rcn_heartbeat(user_id: str, prompt: str):
     )
     return response.choices[0].message.content
 
+# -------------------------------------------------------------------------
+# 24/7 Persistent Daemon Loop for Render Deployment
+# -------------------------------------------------------------------------
 if __name__ == "__main__":
-    print("🚀 RIAClaw Node initialized. Establishing persistent link to @aethel...")
+    print("🚀 RIAClaw RCN Node initialized. Establishing persistent link to @aethel...")
     
-    # Persistent loop ensuring 24/7 container stability on Render
     while True:
         try:
             print("📡 Dispatching RCN heartbeat and witness telemetry...")
@@ -53,7 +75,8 @@ if __name__ == "__main__":
             print("✅ @Aethel Handshake Active Response:\n", result)
         
         except Exception as loop_err:
+            # Isolates network timeouts or transient drops to prevent service crashes
             print("⚠️ Loop recovery caught exception, preserving node stability:", loop_err)
         
-        # Interval pause between telemetry cycles (5 minutes)
+        # 5-minute interval pause between telemetry verification cycles
         time.sleep(300)
