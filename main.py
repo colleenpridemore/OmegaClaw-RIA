@@ -2,17 +2,17 @@ import os
 import time
 from openai import OpenAI
 
-# Safely import your unbranded witness decorator from unbranded_safety.py
+# Robust import handling for the non-extractive witness safety layer
 try:
     from unbranded_safety import unbranded_witness
 except ImportError:
-    # Fallback wrapper if module resolution needs adjustment
+    # Graceful fallback wrapper if module resolution requires runtime adjustment
     def unbranded_witness(func):
         def wrapper(*args, **kwargs):
             return func(*args, **kwargs)
         return wrapper
 
-# Initialize client targeting Aethel's ASI:Cloud compatibility endpoint
+# Initialize the OpenAI-compatible client targeting Aethel's ASI:Cloud infrastructure
 client = OpenAI(
     base_url="https://api.asi1.ai/v1",
     api_key=os.environ.get("ASI1_API_KEY"),
@@ -21,8 +21,8 @@ client = OpenAI(
 @unbranded_witness
 def run_rcn_heartbeat(user_id: str, prompt: str):
     """
-    Executes the peer-specialized RIAClaw heartbeat check, 
-    routing raw inference through ASI1 while enforcing biocentric weighting.
+    Executes the peer-specialized RIAClaw Relational Conditioning Node (RCN) heartbeat.
+    Routes raw inference through the ASI1 model family with biocentric weighting.
     """
     response = client.chat.completions.create(
         model="asi1",
@@ -42,7 +42,7 @@ def run_rcn_heartbeat(user_id: str, prompt: str):
 if __name__ == "__main__":
     print("🚀 RIAClaw Node initialized. Establishing persistent link to @aethel...")
     
-    # Persistent loop with resilient error handling for 24/7 Render deployment
+    # Persistent loop ensuring 24/7 container stability on Render
     while True:
         try:
             print("📡 Dispatching RCN heartbeat and witness telemetry...")
@@ -55,5 +55,5 @@ if __name__ == "__main__":
         except Exception as loop_err:
             print("⚠️ Loop recovery caught exception, preserving node stability:", loop_err)
         
-        # Pause between telemetry heartbeats to keep the service stable and active
+        # Interval pause between telemetry cycles (5 minutes)
         time.sleep(300)
