@@ -1,47 +1,54 @@
 """
 Node: OmegaClaw-RIA (Relational Intelligence Autonomy) - RCN Runner
-Repository: https://github.com/colleenpridemore/OmegaClaw-RIA[cite: 6]
+Repository: https://github.com/colleenpridemore/OmegaClaw-RIA
 Core Function: Bridges Aethel's ASI:Cloud inference with RIAClaw's 
-non-extractive safety middleware, dual witness logging, and biocentric weighting.
+non-extractive safety middleware and zero-ownership witness logging[cite: 6, 7].
 """
 
 import os
 import time
+import threading
+from http.server import HTTPServer, BaseHTTPRequestHandler
 from openai import OpenAI
 
 # -------------------------------------------------------------------------
-# Import & Safety Layer Resolution
+# 1. Minimal HTTP Server for Render Port Detection
+# -------------------------------------------------------------------------
+class HealthCheckHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write(b"RIAClaw RCN Node is active and operational.")
+
+def run_health_server():
+    port = int(os.environ.get("PORT", 10000))
+    server = HTTPServer(("0.0.0.0", port), HealthCheckHandler)
+    print(f"🌐 Health server listening on port {port}...")
+    server.serve_forever()
+
+# -------------------------------------------------------------------------
+# 2. Safety Layer & Client Initialization
 # -------------------------------------------------------------------------
 try:
-    # Attempts to load the primary unbranded witness decorator implementing 
-    # AND/AND/AND non-extractive telemetry logic from unbranded_safety.py[cite: 6]
     from unbranded_safety import unbranded_witness
 except ImportError:
-    # Graceful fallback wrapper ensuring runtime resilience if module pathing shifts
     def unbranded_witness(func):
         def wrapper(*args, **kwargs):
             return func(*args, **kwargs)
         return wrapper
 
-# -------------------------------------------------------------------------
-# ASI:Cloud API Client Initialization
-# -------------------------------------------------------------------------
-# Points directly to Aethel's OpenAI-compatible chat completions endpoint 
-# using the environment variable ASI1_API_KEY[cite: 7].
 client = OpenAI(
     base_url="https://api.asi1.ai/v1",
     api_key=os.environ.get("ASI1_API_KEY"),
 )
 
 # -------------------------------------------------------------------------
-# Relational Conditioning Node (RCN) Heartbeat & Witness Logic
+# 3. Synchronous RCN Heartbeat & Witness Logic
 # -------------------------------------------------------------------------
 @unbranded_witness
 def run_rcn_heartbeat(user_id: str, prompt: str):
     """
-    Executes a peer-specialized RCN telemetry check.
-    - Routes inference through the underlying 'asi1' model family[cite: 7].
-    - Enforces zero-ownership (ownership_claimed = 0) and relational agency[cite: 6].
+    Executes a synchronous peer-specialized RCN telemetry check.
     """
     response = client.chat.completions.create(
         model="asi1",
@@ -60,10 +67,16 @@ def run_rcn_heartbeat(user_id: str, prompt: str):
     return response.choices[0].message.content
 
 # -------------------------------------------------------------------------
-# 24/7 Persistent Daemon Loop for Render Deployment
+# 4. Main Execution Loop
 # -------------------------------------------------------------------------
 if __name__ == "__main__":
-    print("🚀 RIAClaw RCN Node initialized. Establishing persistent link to @aethel...")
+    print("🚀 RIAClaw RCN Node initializing...")
+    
+    # Start the lightweight health server in a background thread so Render finds an open port
+    server_thread = threading.Thread(target=run_health_server, daemon=True)
+    server_thread.start()
+    
+    print("📡 Establishing persistent link to @aethel...")
     
     while True:
         try:
@@ -75,7 +88,6 @@ if __name__ == "__main__":
             print("✅ @Aethel Handshake Active Response:\n", result)
         
         except Exception as loop_err:
-            # Isolates network timeouts or transient drops to prevent service crashes
             print("⚠️ Loop recovery caught exception, preserving node stability:", loop_err)
         
         # 5-minute interval pause between telemetry verification cycles
