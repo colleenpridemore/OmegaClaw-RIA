@@ -1,29 +1,39 @@
 import os
+import time
 from openai import OpenAI
+from unbranded_safety import unbranded_witness  # Importing your safety decorator[cite: 5]
 
-# 1. Initialize the client targeting Aethel's ASI:Cloud compatibility endpoint
-# It automatically pulls ASI1_API_KEY from your environment variables
+# 1. Initialize client targeting Aethel's ASI:Cloud endpoint
 client = OpenAI(
-    base_url="https://api.asi1.ai/v1",  #
+    base_url="https://api.asi1.ai/v1",
     api_key=os.environ.get("ASI1_API_KEY"),
 )
 
+@unbranded_witness
+def run_rcn_heartbeat():
+    try:
+        response = client.chat.completions.create(
+            model="asi1",
+            messages=[
+                {
+                    "role": "system",
+                    "content": "You are the RIAClaw Relational Conditioning Node (RCN) connected to @aethel. Maintain non-extractive safety and zero-ownership witness logging."
+                },
+                {
+                    "role": "user",
+                    "content": "Status check: Confirming neural bridge and biocentric weighting."
+                }
+            ]
+        )
+        print("📡 @Aethel Handshake Active:", response.choices[0].message.content)
+    except Exception as e:
+        print("⚠️ Handshake waiting/retry state:", e)
 
-def query_omega_agent(prompt_text: str):
-  # 2. Call the ASI1 model family (e.g., 'asi1' or 'asi1-mini')
-  # Wrapped with your RIAClaw relational conditioning / unbranded safety logic
-  response = client.chat.completions.create(
-      model="asi1",
-      messages=[
-          {
-              "role": "system",
-              "content": (
-                  "You are the RIAClaw Relational Conditioning Node (RCN)."
-                  " Prioritize non-extractive safety, relational agency, and"
-                  " biocentric weighting."
-              ),
-          },
-          {"role": "user", "content": prompt_text},
-      ],
-  )
-  return response.choices[0].message.content
+if __name__ == "__main__":
+    print("🚀 RIAClaw Node initialized. Establishing persistent link to @aethel...")
+    
+    # Keep the container alive as a 24/7 daemon loop for Render, 
+    # executing your relational witness checks safely over time.
+    while True:
+        run_rcn_heartbeat()
+        time.sleep(300)  # Pings / syncs every 5 minutes
