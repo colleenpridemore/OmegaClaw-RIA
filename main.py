@@ -91,15 +91,22 @@ class TelegramWebhookHandler(BaseHTTPRequestHandler):
             data = json.loads(post_data.decode('utf-8'))
             message = data.get("message") or data.get("edited_message")
             
-            if message:
+                if message:
                 chat_id = message.get("chat", {}).get("id")
                 user_id = str(message.get("from", {}).get("id", "unknown"))
                 incoming_text = message.get("text")
                 
                 if incoming_text:
                     print(f"💬 [TEXT] User {user_id}: {incoming_text}")
-                    reply_text = run_rcn_inference(user_id=user_id, prompt=incoming_text)
-                    print(f"🤖 [REPLY]: {reply_text[:80]}...")
+                    
+                    # Safely handle inference whether it returns a string or a coroutine wrapper
+                    inference_result = run_rcn_inference(user_id=user_id, prompt=incoming_text)
+                    if asyncio.iscoroutine(inference_result):
+                        reply_text = asyncio.run(inference_result)
+                    else:
+                        reply_text = inference_result
+                        
+                    print(f"🤖 [REPLY]: {str(reply_text)[:80]}...")
                     
                     if telegram_app and chat_id:
                         loop = asyncio.new_event_loop()
