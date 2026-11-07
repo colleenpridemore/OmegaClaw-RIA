@@ -75,52 +75,42 @@ class TelegramWebhookHandler(BaseHTTPRequestHandler):
     def do_POST(self):
         print(f"📥 Incoming POST request path: {self.path}")
         
-        # Clean the path to tolerate trailing slashes or minor variations from Telegram
-        clean_path = self.path.split('?')[0].rstrip('/')
+        content_length = int(self.headers.get('Content-Length', 0))
+        post_data = self.rfile.read(content_length)
         
-        if clean_path in ["/telegram", ""]:
-            content_length = int(self.headers.get('Content-Length', 0))
-            post_data = self.rfile.read(content_length)
-            
-            if telegram_app:
-                try:
-                    data = json.loads(post_data.decode('utf-8'))
-                    update = Update.de_json(data, telegram_app.bot)
+        if telegram_app:
+            try:
+                data = json.loads(post_data.decode('utf-8'))
+                update = Update.de_json(data, telegram_app.bot)
+                
+                if update.message and update.message.text:
+                    user_id = str(update.effective_user.id)
+                    incoming_text = update.message.text
                     
-                    if update.message and update.message.text:
-                        user_id = str(update.effective_user.id)
-                        incoming_text = update.message.text
-                        
-                        print(f"💬 Processing message from user {user_id}: {incoming_text}")
-                        reply_text = run_rcn_inference(user_id=user_id, prompt=incoming_text)
-                        
-                        asyncio.run(telegram_app.bot.send_message(
-                            chat_id=update.effective_chat.id, 
-                            text=reply_text
-                        ))
+                    print(f"💬 Processing message from user {user_id}: {incoming_text}")
+                    reply_text = run_rcn_inference(user_id=user_id, prompt=incoming_text)
+                    
+                    asyncio.run(telegram_app.bot.send_message(
+                        chat_id=update.effective_chat.id, 
+                        text=reply_text
+                    ))
 
-                    self.send_response(200)
-                    self.end_headers()
-                    self.wfile.write(b"OK")
-                    return
-                except Exception as e:
-                    print("⚠️ Error processing Telegram webhook payload:", e)
-                    self.send_response(200) # Send 200 so Telegram doesn't retry infinitely on parse bugs
-                    self.end_headers()
-                    self.wfile.write(b"Error handled")
-                    return
-            else:
-                print("⚠️ telegram_app is not initialized!")
                 self.send_response(200)
                 self.end_headers()
-                self.wfile.write(b"App not initialized")
+                self.wfile.write(b"OK")
                 return
-
-        # Fallback for unexpected paths
-        print(f"⚠️ Unhandled POST route: {self.path}")
-        self.send_response(404)
-        self.end_headers()
-        self.wfile.write(b"Not Found")
+            except Exception as e:
+                print("⚠️ Error processing Telegram webhook payload:", e)
+                self.send_response(200)
+                self.end_headers()
+                self.wfile.write(b"Error handled")
+                return
+        else:
+            print("⚠️ telegram_app is not initialized!")
+            self.send_response(200)
+            self.end_headers()
+            self.wfile.write(b"App not initialized")
+            return
 
 def run_server():
     port = int(os.environ.get("PORT", 10000))
