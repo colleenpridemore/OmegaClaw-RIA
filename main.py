@@ -10,6 +10,7 @@ import inspect
 import json
 import os
 import threading
+import traceback
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
 from openai import OpenAI
@@ -22,17 +23,15 @@ try:
     from unbranded_safety import unbranded_witness
 except ImportError:
     def unbranded_witness(func):
-        def wrapper(*args, **kwargs):
-            return func(*args, **kwargs)
-        return wrapper
+        return func
 
 ASI1_API_KEY = os.environ.get("ASI1_API_KEY")
 if not ASI1_API_KEY:
-    raise RuntimeError("ASI1_API_KEY is not set. Please export it before starting the bot.")
+    raise RuntimeError("ASI1_API_KEY is not set. Please configure it in the deployment environment.")
 
 TELEGRAM_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
 if not TELEGRAM_TOKEN:
-    raise RuntimeError("TELEGRAM_BOT_TOKEN is not set. Please export it before starting the bot.")
+    raise RuntimeError("TELEGRAM_BOT_TOKEN is not set. Please configure it in the deployment environment.")
 
 WEBHOOK_URL = os.environ.get("WEBHOOK_URL")
 PORT = int(os.environ.get("PORT", "10000"))
@@ -54,10 +53,10 @@ def normalize_reply_text(value):
     return str(value).strip()
 
 
-@unbranded_witness
-def run_rcn_inference(user_id: str, prompt: str):
-    """Route a Telegram query through ASI1 with the RCN system instructions."""
-    response = client.chat.completions.create(
+async def _request_rcn_inference(user_id: str, prompt: str) -> str:
+    """Run the synchronous OpenAI SDK request without blocking the async bot loop."""
+    response = await asyncio.to_thread(
+        client.chat.completions.create,
         model="asi1",
         messages=[
             {
@@ -71,8 +70,15 @@ def run_rcn_inference(user_id: str, prompt: str):
             {"role": "user", "content": prompt},
         ],
     )
-    content = response.choices[0].message.content
-    return normalize_reply_text(content) or "I couldn't generate a response right now."
+    if not response.choices:
+        raise RuntimeError("ASI1 returned no completion choices.")
+    return normalize_reply_text(response.choices[0].message.content)
+
+
+@unbranded_witness
+async def run_rcn_inference(user_id: str, prompt: str):
+    """Route a Telegram query through async-compatible safety middleware."""
+    return await _request_rcn_inference(user_id, prompt)
 
 
 # -------------------------------------------------------------------------
@@ -86,9 +92,9 @@ async def initialize_telegram_app():
     await telegram_app.initialize()
     if WEBHOOK_URL:
         await telegram_app.bot.set_webhook(url=WEBHOOK_URL)
-        print(f"✅ Telegram webhook registered: {WEBHOOK_URL}")
+        print(f"✅ Telegram webhook registered: {WEBHOOK_URL}", flush=True)
     else:
-        print("⚠️ WEBHOOK_URL not set. Set it to the public HTTPS endpoint to receive updates.")
+        print("⚠️ WEBHOOK_URL not set. Set it to the public HTTPS endpoint to receive updates.", flush=True)
 
 
 def _run_bot_loop():
@@ -100,6 +106,7 @@ async def _process_telegram_update(payload):
     """Process an update and send the reply using the bot's persistent event loop."""
     message = payload.get("message") or payload.get("edited_message")
     if not isinstance(message, dict):
+        print("ℹ️ Update received without a supported text message.", flush=True)
         return
 
     chat = message.get("chat") or {}
@@ -109,34 +116,34 @@ async def _process_telegram_update(payload):
     incoming_text = message.get("text")
 
     if not chat_id or not isinstance(incoming_text, str) or not incoming_text.strip():
+        print("ℹ️ Update received without chat ID or text.", flush=True)
         return
 
-    print(f"💬 [TEXT] User {user_id}: {incoming_text}")
+    print(f"💬 [TEXT] User {user_id}: {incoming_text[:200]}", flush=True)
 
     try:
-        # The OpenAI client is synchronous; run it off-loop so Telegram can
-        # continue handling network operations on this persistent event loop.
-        inference_result = await asyncio.to_thread(
-            run_rcn_inference, user_id=user_id, prompt=incoming_text
-        )
-        # Safety decorators may return a coroutine/awaitable even when the
-        # decorated function itself is synchronous. Resolve it before using it.
+        inference_result = run_rcn_inference(user_id=user_id, prompt=incoming_text)
         if inspect.isawaitable(inference_result):
             inference_result = await inference_result
+
+        # The witness middleware returns a mapping containing agent_response
+        # and telemetry; only the response string should be sent to Telegram.
+        if isinstance(inference_result, dict):
+            inference_result = inference_result.get("agent_response")
         reply_text = normalize_reply_text(inference_result)
         if not reply_text:
             reply_text = "I couldn't generate a response right now."
     except Exception as exc:
-        print(f"💥 [INFERENCE ERROR]: {exc}")
+        print(f"💥 [INFERENCE ERROR]: {exc}", flush=True)
+        traceback.print_exc()
         reply_text = "I hit an error while generating a response. Please try again."
 
-    print(f"🤖 [REPLY]: {reply_text[:80]}...")
+    print(f"🤖 [REPLY]: {reply_text[:80]}...", flush=True)
     try:
         await telegram_app.bot.send_message(chat_id=chat_id, text=reply_text)
-        print("✨ [SUCCESS] Reply sent to Telegram!")
+        print("✨ [SUCCESS] Reply sent to Telegram!", flush=True)
     except Exception as exc:
-        print(f"💥 [SEND ERROR]: {exc}")
-        import traceback
+        print(f"💥 [SEND ERROR]: {exc}", flush=True)
         traceback.print_exc()
 
 
@@ -145,12 +152,18 @@ async def _process_telegram_update(payload):
 # -------------------------------------------------------------------------
 class TelegramWebhookHandler(BaseHTTPRequestHandler):
     def do_GET(self):
+        print(f"📥 [WEBHOOK HIT] GET request path: {self.path}", flush=True)
         self.send_response(200)
         self.end_headers()
         self.wfile.write(b"RIAClaw Telegram RCN Node is active and listening via Webhook.")
 
+    def do_HEAD(self):
+        print(f"📥 [WEBHOOK HIT] HEAD request path: {self.path}", flush=True)
+        self.send_response(200)
+        self.end_headers()
+
     def do_POST(self):
-        print(f"📥 [WEBHOOK HIT] POST request path: {self.path}")
+        print(f"📥 [WEBHOOK HIT] POST request path: {self.path}", flush=True)
         try:
             content_length = int(self.headers.get("Content-Length", "0"))
             if content_length <= 0 or content_length > 1_000_000:
@@ -166,9 +179,11 @@ class TelegramWebhookHandler(BaseHTTPRequestHandler):
             return
 
         try:
-            asyncio.run_coroutine_threadsafe(_process_telegram_update(payload), bot_loop)
+            future = asyncio.run_coroutine_threadsafe(_process_telegram_update(payload), bot_loop)
+            # Surface uncaught async handler errors in logs rather than silently dropping them.
+            future.add_done_callback(_log_update_failure)
         except RuntimeError as exc:
-            print(f"💥 [SCHEDULING ERROR]: {exc}")
+            print(f"💥 [SCHEDULING ERROR]: {exc}", flush=True)
             self.send_error(503, "Bot is not ready")
             return
 
@@ -180,9 +195,17 @@ class TelegramWebhookHandler(BaseHTTPRequestHandler):
         return
 
 
+def _log_update_failure(future):
+    try:
+        future.result()
+    except Exception:
+        print("💥 [UNHANDLED UPDATE ERROR]", flush=True)
+        traceback.print_exc()
+
+
 def run_server():
     server = HTTPServer(("0.0.0.0", PORT), TelegramWebhookHandler)
-    print(f"🌐 Unified Webhook & Health server listening on port {PORT}...")
+    print(f"🌐 Unified Webhook & Health server listening on port {PORT}...", flush=True)
     server.serve_forever()
 
 
@@ -190,7 +213,7 @@ def run_server():
 # 4. Main Execution Loop & Initialization
 # -------------------------------------------------------------------------
 if __name__ == "__main__":
-    print("🚀 RIAClaw RCN Telegram Node initializing...")
+    print("🚀 RIAClaw RCN Telegram Node initializing...", flush=True)
     bot_thread = threading.Thread(target=_run_bot_loop, name="telegram-event-loop", daemon=True)
     bot_thread.start()
 
