@@ -72,7 +72,7 @@ class TelegramWebhookHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(b"RIAClaw Telegram RCN Node is active and listening via Webhook.")
 
-    def do_POST(self):
+   def do_POST(self):
         print(f"📥 Incoming POST request path: {self.path}")
         
         content_length = int(self.headers.get('Content-Length', 0))
