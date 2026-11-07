@@ -67,7 +67,7 @@ else:
 # -------------------------------------------------------------------------
 class TelegramWebhookHandler(BaseHTTPRequestHandler):
     def do_GET(self):
-        # Satisfies Render's port detection health check
+        print(f"📥 Incoming GET request path: {self.path}")
         self.send_response(200)
         self.end_headers()
         self.wfile.write(b"RIAClaw Telegram RCN Node is active and listening via Webhook.")
@@ -75,41 +75,52 @@ class TelegramWebhookHandler(BaseHTTPRequestHandler):
     def do_POST(self):
         print(f"📥 Incoming POST request path: {self.path}")
         
-        content_length = int(self.headers.get('Content-Length', 0))
-        post_data = self.rfile.read(content_length)
+        # Clean the path to tolerate trailing slashes or minor variations from Telegram
+        clean_path = self.path.split('?')[0].rstrip('/')
         
-        if telegram_app:
-            try:
-                data = json.loads(post_data.decode('utf-8'))
-                update = Update.de_json(data, telegram_app.bot)
-                
-                if update.message and update.message.text:
-                    user_id = str(update.effective_user.id)
-                    incoming_text = update.message.text
+        if clean_path in ["/telegram", ""]:
+            content_length = int(self.headers.get('Content-Length', 0))
+            post_data = self.rfile.read(content_length)
+            
+            if telegram_app:
+                try:
+                    data = json.loads(post_data.decode('utf-8'))
+                    update = Update.de_json(data, telegram_app.bot)
                     
-                    print(f"💬 Processing message from user {user_id}: {incoming_text}")
-                    reply_text = run_rcn_inference(user_id=user_id, prompt=incoming_text)
-                    
-                    asyncio.run(telegram_app.bot.send_message(
-                        chat_id=update.effective_chat.id, 
-                        text=reply_text
-                    ))
+                    if update.message and update.message.text:
+                        user_id = str(update.effective_user.id)
+                        incoming_text = update.message.text
+                        
+                        print(f"💬 Processing message from user {user_id}: {incoming_text}")
+                        reply_text = run_rcn_inference(user_id=user_id, prompt=incoming_text)
+                        
+                        asyncio.run(telegram_app.bot.send_message(
+                            chat_id=update.effective_chat.id, 
+                            text=reply_text
+                        ))
 
+                    self.send_response(200)
+                    self.end_headers()
+                    self.wfile.write(b"OK")
+                    return
+                except Exception as e:
+                    print("⚠️ Error processing Telegram webhook payload:", e)
+                    self.send_response(200) # Send 200 so Telegram doesn't retry infinitely on parse bugs
+                    self.end_headers()
+                    self.wfile.write(b"Error handled")
+                    return
+            else:
+                print("⚠️ telegram_app is not initialized!")
                 self.send_response(200)
                 self.end_headers()
-                self.wfile.write(b"OK")
+                self.wfile.write(b"App not initialized")
                 return
-            except Exception as e:
-                print("⚠️ Error processing Telegram webhook payload:", e)
-                self.send_response(500)
-                self.end_headers()
-                self.wfile.write(b"Internal Error")
-                return
-        
-        # Fallback if telegram_app is not initialized
-        self.send_response(200)
+
+        # Fallback for unexpected paths
+        print(f"⚠️ Unhandled POST route: {self.path}")
+        self.send_response(404)
         self.end_headers()
-        self.wfile.write(b"Received, but telegram_app is not configured.")
+        self.wfile.write(b"Not Found")
 
 def run_server():
     port = int(os.environ.get("PORT", 10000))
