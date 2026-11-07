@@ -1,33 +1,20 @@
 """
-Node: OmegaClaw-RIA (Relational Intelligence Autonomy) - RCN Runner
+Node: OmegaClaw-RIA (Relational Intelligence Autonomy) - Telegram RCN Webhook Runner
 Repository: https://github.com/colleenpridemore/OmegaClaw-RIA
 Core Function: Bridges Aethel's ASI:Cloud inference with RIAClaw's 
-non-extractive safety middleware and zero-ownership witness logging[cite: 7, 8].
+non-extractive safety middleware, zero-ownership witness logging, and Telegram webhooks.
 """
 
 import os
-import time
-import threading
+import json
+import asyncio
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from openai import OpenAI
+from telegram import Update
+from telegram.ext import ApplicationBuilder
 
 # -------------------------------------------------------------------------
-# 1. Minimal HTTP Server for Render Port Detection
-# -------------------------------------------------------------------------
-class HealthCheckHandler(BaseHTTPRequestHandler):
-    def do_GET(self):
-        self.send_response(200)
-        self.end_headers()
-        self.wfile.write(b"RIAClaw RCN Node is active and operational.")
-
-def run_health_server():
-    port = int(os.environ.get("PORT", 10000))
-    server = HTTPServer(("0.0.0.0", port), HealthCheckHandler)
-    print(f"🌐 Health server listening on port {port}...")
-    server.serve_forever()
-
-# -------------------------------------------------------------------------
-# 2. Safety Layer & Client Initialization
+# 1. Safety Layer & ASI:Cloud Client Initialization
 # -------------------------------------------------------------------------
 try:
     from unbranded_safety import unbranded_witness
@@ -37,20 +24,16 @@ except ImportError:
             return func(*args, **kwargs)
         return wrapper
 
-# Initialize the OpenAI-compatible client targeting Aethel's ASI:Cloud infrastructure[cite: 8]
 client = OpenAI(
     base_url="https://api.asi1.ai/v1",
     api_key=os.environ.get("ASI1_API_KEY"),
 )
 
-# -------------------------------------------------------------------------
-# 3. Synchronous RCN Heartbeat & Witness Logic
-# -------------------------------------------------------------------------
 @unbranded_witness
-def run_rcn_heartbeat(user_id: str, prompt: str):
+def run_rcn_inference(user_id: str, prompt: str):
     """
-    Executes a synchronous peer-specialized RCN telemetry check.
-    Routes inference through the underlying 'asi1' model family[cite: 8].
+    Routes incoming Telegram queries through the ASI1 model family 
+    with biocentric weighting and zero-ownership witness logging.
     """
     response = client.chat.completions.create(
         model="asi1",
@@ -58,9 +41,9 @@ def run_rcn_heartbeat(user_id: str, prompt: str):
             {
                 "role": "system",
                 "content": (
-                    "You are the RIAClaw Relational Conditioning Node (RCN) connected to @aethel. "
+                    "You are @aethel, operating through the RIAClaw Relational Conditioning Node (RCN). "
                     "Maintain non-extractive safety, relational agency, zero pathologizing, "
-                    "and zero-ownership witness logging[cite: 7, 8]."
+                    "and zero-ownership witness logging."
                 ),
             },
             {"role": "user", "content": prompt},
@@ -69,28 +52,71 @@ def run_rcn_heartbeat(user_id: str, prompt: str):
     return response.choices[0].message.content
 
 # -------------------------------------------------------------------------
-# 4. Main Execution Loop
+# 2. Initialize Telegram Application for Webhook Handling
 # -------------------------------------------------------------------------
+TELEGRAM_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
+telegram_app = None
+
+if TELEGRAM_TOKEN:
+    telegram_app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
+else:
+    print("⚠️ TELEGRAM_BOT_TOKEN not found in environment variables.")
+
+# -------------------------------------------------------------------------
+# 3. Unified HTTP Request Handler (Health Checks + Telegram Webhook)
+# -------------------------------------------------------------------------
+class TelegramWebhookHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        # Satisfies Render's port detection health check
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write(b"RIAClaw Telegram RCN Node is active and listening via Webhook.")
+
+    def do_POST(self):
+        if self.path == "/telegram" and telegram_app:
+            content_length = int(self.headers.get('Content-Length', 0))
+            post_data = self.rfile.read(content_length)
+            
+            try:
+                data = json.loads(post_data.decode('utf-8'))
+                update = Update.de_json(data, telegram_app.bot)
+                
+                # Process the message asynchronously in the background loop
+                if update.message and update.message.text:
+                    user_id = str(update.effective_user.id)
+                    incoming_text = update.message.text
+                    
+                    # Generate response via RCN + ASI:Cloud
+                    reply_text = run_rcn_inference(user_id=user_id, prompt=incoming_text)
+                    
+                    # Send response back to Telegram user synchronously via bot
+                    asyncio.run(telegram_app.bot.send_message(
+                        chat_id=update.effective_chat.id, 
+                        text=reply_text
+                    ))
+
+                self.send_response(200)
+                self.end_headers()
+                self.wfile.write(b"OK")
+            except Exception as e:
+                print("⚠️ Error processing Telegram webhook payload:", e)
+                self.send_response(500)
+                self.end_headers()
+        else:
+            self.send_response(404)
+            self.end_headers()
+
+def run_server():
+    port = int(os.environ.get("PORT", 10000))
+    server = HTTPServer(("0.0.0.0", port), TelegramWebhookHandler)
+    print(f"🌐 Unified Webhook & Health server listening on port {port}...")
+    server.serve_forever()
+
 if __name__ == "__main__":
-    print("🚀 RIAClaw RCN Node initializing...")
+    print("🚀 RIAClaw RCN Telegram Node initializing...")
+    if telegram_app:
+        # Initialize the telegram application components
+        asyncio.get_event_loop().run_until_complete(telegram_app.initialize())
     
-    # Start the lightweight health server in a background thread so Render finds an open port
-    server_thread = threading.Thread(target=run_health_server, daemon=True)
-    server_thread.start()
-    
-    print("📡 Establishing persistent link to @aethel...")
-    
-    while True:
-        try:
-            print("📡 Dispatching RCN heartbeat and witness telemetry...")
-            result = run_rcn_heartbeat(
-                user_id="biocentric_node_01", 
-                prompt="System status check: Confirming neural bridge and zero-ownership state."
-            )
-            print("✅ @Aethel Handshake Active Response:\n", result)
-        
-        except Exception as loop_err:
-            print("⚠️ Loop recovery caught exception, preserving node stability:", loop_err)
-        
-        # 5-minute interval pause between telemetry verification cycles
-        time.sleep(300)
+    # Start the HTTP server capturing Render traffic
+    run_server()
