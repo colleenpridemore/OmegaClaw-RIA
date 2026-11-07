@@ -67,49 +67,66 @@ else:
 # -------------------------------------------------------------------------
 class TelegramWebhookHandler(BaseHTTPRequestHandler):
     def do_GET(self):
-        print(f"📥 Incoming GET request path: {self.path}")
+        print(f"📥 [WEBHOOK HIT] Incoming GET request path: {self.path}")
         self.send_response(200)
         self.end_headers()
         self.wfile.write(b"RIAClaw Telegram RCN Node is active and listening via Webhook.")
 
-   def do_POST(self):
-        print(f"📥 Incoming POST request path: {self.path}")
-        
+    def do_POST(self):
+        print(f"📥 [WEBHOOK HIT] Incoming POST request path: {self.path}")
         content_length = int(self.headers.get('Content-Length', 0))
         post_data = self.rfile.read(content_length)
+        print(f"📦 [BODY] Raw payload received ({len(post_data)} bytes)")
         
-        if telegram_app:
-            try:
-                data = json.loads(post_data.decode('utf-8'))
-                update = Update.de_json(data, telegram_app.bot)
-                
-                if update.message and update.message.text:
+        if not telegram_app:
+            print("❌ [ERROR] telegram_app is NOT initialized!")
+            self.send_response(200)
+            self.end_headers()
+            self.wfile.write(b"App not initialized")
+            return
+
+        try:
+            body_str = post_data.decode('utf-8')
+            data = json.loads(body_str)
+            
+            update = Update.de_json(data, telegram_app.bot)
+            print(f"✅ [UPDATE] Successfully parsed Telegram Update object ID: {update.update_id}")
+            
+            if update.message:
+                print(f"💬 [MESSAGE DETECTED] From chat ID: {update.effective_chat.id}")
+                if update.message.text:
                     user_id = str(update.effective_user.id)
                     incoming_text = update.message.text
+                    print(f"💬 [TEXT] User {user_id} says: {incoming_text}")
                     
-                    print(f"💬 Processing message from user {user_id}: {incoming_text}")
+                    print(f"🤖 [INFERENCE] Calling ASI:Cloud via unbranded_witness...")
                     reply_text = run_rcn_inference(user_id=user_id, prompt=incoming_text)
+                    print(f"🤖 [INFERENCE REPLY]: {reply_text[:100]}...")
                     
+                    print(f"📤 [TELEGRAM] Sending reply back to chat {update.effective_chat.id}...")
                     asyncio.run(telegram_app.bot.send_message(
                         chat_id=update.effective_chat.id, 
                         text=reply_text
                     ))
+                    print(f"✨ [SUCCESS] Reply sent successfully!")
+                else:
+                    print("ℹ️ [INFO] Update message contained no text.")
+            else:
+                print("ℹ️ [INFO] Update contained no message object.")
 
-                self.send_response(200)
-                self.end_headers()
-                self.wfile.write(b"OK")
-                return
-            except Exception as e:
-                print("⚠️ Error processing Telegram webhook payload:", e)
-                self.send_response(200)
-                self.end_headers()
-                self.wfile.write(b"Error handled")
-                return
-        else:
-            print("⚠️ telegram_app is not initialized!")
             self.send_response(200)
             self.end_headers()
-            self.wfile.write(b"App not initialized")
+            self.wfile.write(b"OK")
+            return
+            
+        except Exception as e:
+            print(f"💥 [CRITICAL EXCEPTION in do_POST]: {type(e).__name__}: {e}")
+            import traceback
+            traceback.print_exc()
+            
+            self.send_response(200)
+            self.end_headers()
+            self.wfile.write(b"Error handled internally")
             return
 
 def run_server():
