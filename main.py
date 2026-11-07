@@ -72,11 +72,13 @@ class TelegramWebhookHandler(BaseHTTPRequestHandler):
         self.wfile.write(b"RIAClaw Telegram RCN Node is active and listening via Webhook.")
 
     def do_POST(self):
-        clean_path = self.path.rstrip('/')
-        if clean_path == "/telegram" and telegram_app:
-            content_length = int(self.headers.get('Content-Length', 0))
-            post_data = self.rfile.read(content_length)
-            
+        print(f"📥 Incoming POST request path: {self.path}")
+        
+        # Accept /telegram, /telegram/, or catch it flexibly
+        content_length = int(self.headers.get('Content-Length', 0))
+        post_data = self.rfile.read(content_length)
+        
+        if telegram_app:
             try:
                 data = json.loads(post_data.decode('utf-8'))
                 update = Update.de_json(data, telegram_app.bot)
@@ -85,6 +87,7 @@ class TelegramWebhookHandler(BaseHTTPRequestHandler):
                     user_id = str(update.effective_user.id)
                     incoming_text = update.message.text
                     
+                    print(f"💬 Processing message from user {user_id}: {incoming_text}")
                     reply_text = run_rcn_inference(user_id=user_id, prompt=incoming_text)
                     
                     asyncio.run(telegram_app.bot.send_message(
@@ -95,6 +98,14 @@ class TelegramWebhookHandler(BaseHTTPRequestHandler):
                 self.send_response(200)
                 self.end_headers()
                 self.wfile.write(b"OK")
+                return
+            except Exception as e:
+                print("⚠️ Error processing Telegram webhook payload:", e)
+        
+        # If something didn't match or app isn't ready
+        self.send_response(200)  # Return 200 so Telegram doesn't spam retries while debugging
+        self.end_headers()
+        self.wfile.write(b"Received, but check server logs.")
             except Exception as e:
                 print("⚠️ Error processing Telegram webhook payload:", e)
                 self.send_response(500)
