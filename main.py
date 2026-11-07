@@ -2,7 +2,7 @@
 Node: OmegaClaw-RIA (Relational Intelligence Autonomy) - RCN Runner
 Repository: https://github.com/colleenpridemore/OmegaClaw-RIA
 Core Function: Bridges Aethel's ASI:Cloud inference with RIAClaw's 
-non-extractive safety middleware and zero-ownership witness logging[cite: 6, 7].
+non-extractive safety middleware and zero-ownership witness logging[cite: 7, 8].
 """
 
 import os
@@ -37,6 +37,7 @@ except ImportError:
             return func(*args, **kwargs)
         return wrapper
 
+# Initialize the OpenAI-compatible client targeting Aethel's ASI:Cloud infrastructure[cite: 8]
 client = OpenAI(
     base_url="https://api.asi1.ai/v1",
     api_key=os.environ.get("ASI1_API_KEY"),
@@ -49,6 +50,7 @@ client = OpenAI(
 def run_rcn_heartbeat(user_id: str, prompt: str):
     """
     Executes a synchronous peer-specialized RCN telemetry check.
+    Routes inference through the underlying 'asi1' model family[cite: 8].
     """
     response = client.chat.completions.create(
         model="asi1",
@@ -58,7 +60,7 @@ def run_rcn_heartbeat(user_id: str, prompt: str):
                 "content": (
                     "You are the RIAClaw Relational Conditioning Node (RCN) connected to @aethel. "
                     "Maintain non-extractive safety, relational agency, zero pathologizing, "
-                    "and zero-ownership witness logging[cite: 6, 7]."
+                    "and zero-ownership witness logging[cite: 7, 8]."
                 ),
             },
             {"role": "user", "content": prompt},
