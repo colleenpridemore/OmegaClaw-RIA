@@ -8,6 +8,7 @@ non-extractive safety middleware, zero-ownership witness logging, and Telegram w
 import os
 import json
 import asyncio
+import threading
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from openai import OpenAI
 from telegram import Update
@@ -79,7 +80,7 @@ class TelegramWebhookHandler(BaseHTTPRequestHandler):
             post_data = self.rfile.read(content_length)
             print(f"📦 [BODY] Read {len(post_data)} bytes from Telegram.")
 
-            # Acknowledge Telegram immediately with 200 OK
+            # Acknowledge Telegram immediately with 200 OK so it never times out
             self.send_response(200)
             self.end_headers()
             self.wfile.write(b"OK")
@@ -87,36 +88,45 @@ class TelegramWebhookHandler(BaseHTTPRequestHandler):
             if not post_data:
                 return
 
-            # Parse payload
             data = json.loads(post_data.decode('utf-8'))
-            message = data.get("message") or data.get("edited_message")
-            
-                if message:
-                chat_id = message.get("chat", {}).get("id")
-                user_id = str(message.get("from", {}).get("id", "unknown"))
-                incoming_text = message.get("text")
-                
-                if incoming_text:
-                    print(f"💬 [TEXT] User {user_id}: {incoming_text}")
-                    
-                    # Safely handle inference whether it returns a string or a coroutine wrapper
-                    inference_result = run_rcn_inference(user_id=user_id, prompt=incoming_text)
-                    if asyncio.iscoroutine(inference_result):
-                        reply_text = asyncio.run(inference_result)
-                    else:
-                        reply_text = inference_result
+
+            # Spin off background execution to prevent socket blocking
+            def process_async():
+                try:
+                    message = data.get("message") or data.get("edited_message")
+                    if message:
+                        chat_id = message.get("chat", {}).get("id")
+                        user_id = str(message.get("from", {}).get("id", "unknown"))
+                        incoming_text = message.get("text")
                         
-                    print(f"🤖 [REPLY]: {str(reply_text)[:80]}...")
-                    
-                    if telegram_app and chat_id:
-                        loop = asyncio.new_event_loop()
-                        asyncio.set_event_loop(loop)
-                        loop.run_until_complete(telegram_app.bot.send_message(
-                            chat_id=chat_id, 
-                            text=reply_text
-                        ))
-                        loop.close()
-                        print("✨ [SUCCESS] Reply sent to Telegram!")
+                        if incoming_text:
+                            print(f"💬 [TEXT] User {user_id}: {incoming_text}")
+                            
+                            # Safely handle inference whether it returns a string or a coroutine wrapper
+                            inference_result = run_rcn_inference(user_id=user_id, prompt=incoming_text)
+                            if asyncio.iscoroutine(inference_result):
+                                reply_text = asyncio.run(inference_result)
+                            else:
+                                reply_text = inference_result
+                                
+                            print(f"🤖 [REPLY]: {str(reply_text)[:80]}...")
+                            
+                            if telegram_app and chat_id:
+                                loop = asyncio.new_event_loop()
+                                asyncio.set_event_loop(loop)
+                                loop.run_until_complete(telegram_app.bot.send_message(
+                                    chat_id=chat_id, 
+                                    text=reply_text
+                                ))
+                                loop.close()
+                                print("✨ [SUCCESS] Reply sent to Telegram!")
+                except Exception as bg_err:
+                    print(f"💥 [BACKGROUND ERROR]: {bg_err}")
+                    import traceback
+                    traceback.print_exc()
+
+            threading.Thread(target=process_async).start()
+
         except Exception as e:
             print(f"💥 [ERROR in do_POST]: {e}")
             import traceback
