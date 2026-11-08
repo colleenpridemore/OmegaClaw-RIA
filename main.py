@@ -13,7 +13,7 @@ import threading
 import traceback
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
-from openai import OpenAI
+from openai import AsyncOpenAI
 from telegram.ext import ApplicationBuilder
 
 # -------------------------------------------------------------------------
@@ -36,9 +36,12 @@ if not TELEGRAM_TOKEN:
 WEBHOOK_URL = os.environ.get("WEBHOOK_URL")
 PORT = int(os.environ.get("PORT", "10000"))
 
-client = OpenAI(
+# Use the async SDK directly so inference does not depend on a worker thread
+# or block the Telegram event loop. The timeout also prevents stuck requests.
+client = AsyncOpenAI(
     base_url="https://api.asi1.ai/v1",
     api_key=ASI1_API_KEY,
+    timeout=45.0,
 )
 
 
@@ -49,14 +52,19 @@ def normalize_reply_text(value):
     if isinstance(value, str):
         return value.strip()
     if isinstance(value, list):
-        return " ".join(str(item) for item in value if item)
+        parts = []
+        for item in value:
+            if isinstance(item, str):
+                parts.append(item)
+            elif isinstance(item, dict) and isinstance(item.get("text"), str):
+                parts.append(item["text"])
+        return " ".join(part for part in parts if part).strip()
     return str(value).strip()
 
 
 async def _request_rcn_inference(user_id: str, prompt: str) -> str:
-    """Run the synchronous OpenAI SDK request without blocking the async bot loop."""
-    response = await asyncio.to_thread(
-        client.chat.completions.create,
+    """Request a completion from ASI:Cloud without blocking the bot loop."""
+    response = await client.chat.completions.create(
         model="asi1",
         messages=[
             {
@@ -86,6 +94,7 @@ async def run_rcn_inference(user_id: str, prompt: str):
 # -------------------------------------------------------------------------
 telegram_app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
 bot_loop = asyncio.new_event_loop()
+bot_loop_ready = threading.Event()
 
 
 async def initialize_telegram_app():
@@ -99,7 +108,16 @@ async def initialize_telegram_app():
 
 def _run_bot_loop():
     asyncio.set_event_loop(bot_loop)
-    bot_loop.run_forever()
+    bot_loop_ready.set()
+    try:
+        bot_loop.run_forever()
+    finally:
+        pending = asyncio.all_tasks(bot_loop)
+        for task in pending:
+            task.cancel()
+        if pending:
+            bot_loop.run_until_complete(asyncio.gather(*pending, return_exceptions=True))
+        bot_loop.close()
 
 
 async def _process_telegram_update(payload):
@@ -126,7 +144,7 @@ async def _process_telegram_update(payload):
         if inspect.isawaitable(inference_result):
             inference_result = await inference_result
 
-        # The witness middleware returns a mapping containing agent_response
+        # The witness middleware may return a mapping containing agent_response
         # and telemetry; only the response string should be sent to Telegram.
         if isinstance(inference_result, dict):
             inference_result = inference_result.get("agent_response")
@@ -134,7 +152,9 @@ async def _process_telegram_update(payload):
         if not reply_text:
             reply_text = "I couldn't generate a response right now."
     except Exception as exc:
-        print(f"💥 [INFERENCE ERROR]: {exc}", flush=True)
+        # Preserve provider/middleware details in deployment logs; the user gets
+        # a generic message that does not expose internal errors.
+        print(f"💥 [INFERENCE ERROR] {type(exc).__name__}: {exc}", flush=True)
         traceback.print_exc()
         reply_text = "I hit an error while generating a response. Please try again."
 
@@ -143,7 +163,7 @@ async def _process_telegram_update(payload):
         await telegram_app.bot.send_message(chat_id=chat_id, text=reply_text)
         print("✨ [SUCCESS] Reply sent to Telegram!", flush=True)
     except Exception as exc:
-        print(f"💥 [SEND ERROR]: {exc}", flush=True)
+        print(f"💥 [SEND ERROR] {type(exc).__name__}: {exc}", flush=True)
         traceback.print_exc()
 
 
@@ -176,6 +196,10 @@ class TelegramWebhookHandler(BaseHTTPRequestHandler):
                 return
         except (ValueError, UnicodeDecodeError, json.JSONDecodeError):
             self.send_error(400, "Invalid JSON payload")
+            return
+
+        if not bot_loop.is_running():
+            self.send_error(503, "Bot is not ready")
             return
 
         try:
@@ -217,6 +241,17 @@ if __name__ == "__main__":
     bot_thread = threading.Thread(target=_run_bot_loop, name="telegram-event-loop", daemon=True)
     bot_thread.start()
 
+    if not bot_loop_ready.wait(timeout=10):
+        raise RuntimeError("Telegram event loop did not start within 10 seconds.")
+
     # Initialize and register the bot on the same loop that handles all sends.
-    asyncio.run_coroutine_threadsafe(initialize_telegram_app(), bot_loop).result()
+    try:
+        asyncio.run_coroutine_threadsafe(initialize_telegram_app(), bot_loop).result(timeout=60)
+    except Exception:
+        print("💥 Telegram application initialization failed.", flush=True)
+        traceback.print_exc()
+        bot_loop.call_soon_threadsafe(bot_loop.stop)
+        bot_thread.join(timeout=10)
+        raise
+
     run_server()
