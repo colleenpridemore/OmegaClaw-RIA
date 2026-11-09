@@ -72,8 +72,20 @@ def normalize_reply_text(value):
     return str(value).strip()
 
 
+def _to_decision_question(prompt: str) -> str:
+    """Frame arbitrary Telegram text as a decision about the user-facing reply."""
+    return (
+        "Decision question: Select the most appropriate concise, helpful, and safe "
+        "user-facing response to the Telegram message below. For a greeting or small-talk "
+        "message, choose a warm conversational reply; for a factual question, provide a "
+        "brief factual answer; for a request, respond to the request directly. Return only "
+        "the reply that should be sent to the user, without analysis.\n\n"
+        f"Telegram message:\n{prompt}"
+    )
+
+
 def _build_structured_question_messages(user_id: str, prompt: str):
-    """Convert a Telegram user message into the exact schema ASI:Cloud requires."""
+    """Convert a Telegram message into ASI:Cloud's required schema/state request."""
     system_schema = json.dumps({
         "type": "object",
         "properties": {
@@ -96,10 +108,10 @@ def _build_structured_question_messages(user_id: str, prompt: str):
         "state": {
             "user_id": user_id,
             "context": "RIAClaw Relational Conditioning Node (RCN) non-extractive safety mode",
-            "conversation_mode": "telegram",
+            "conversation_mode": "telegram response selection",
         },
         "questions": [
-            {"id": "q1", "text": prompt}
+            {"id": "q1", "text": _to_decision_question(prompt)}
         ],
     })
 
@@ -110,7 +122,7 @@ def _build_structured_question_messages(user_id: str, prompt: str):
 
 
 async def _request_rcn_inference(user_id: str, prompt: str) -> str:
-    """Send a structured decision-question request to ASI:Cloud."""
+    """Send a structured response-selection decision request to ASI:Cloud."""
     messages = _build_structured_question_messages(user_id, prompt)
     request_info = {
         "method": "POST",
@@ -134,13 +146,12 @@ async def _request_rcn_inference(user_id: str, prompt: str) -> str:
             messages=messages,
         )
     except Exception as exc:
-        error_info = {
+        _asi_debug("request_failed", {
             "exception_type": type(exc).__name__,
             "status_code": getattr(exc, "status_code", None),
             "code": getattr(exc, "code", None),
             "message": str(exc),
-        }
-        _asi_debug("request_failed", error_info)
+        })
         raise
 
     if not response.choices:
