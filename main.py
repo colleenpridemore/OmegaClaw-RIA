@@ -25,8 +25,6 @@ except ImportError:
     def unbranded_witness(func):
         return func
 
-# ASI:Cloud's account example uses ASI_API_KEY. Keep OPENAI_API_KEY as a
-# backwards-compatible fallback for existing deployments.
 API_KEY = os.environ.get("ASI_API_KEY") or os.environ.get("OPENAI_API_KEY")
 if not API_KEY:
     raise RuntimeError("ASI_API_KEY is not set. Please configure it in the deployment environment.")
@@ -37,16 +35,26 @@ if not TELEGRAM_TOKEN:
 
 WEBHOOK_URL = os.environ.get("WEBHOOK_URL")
 PORT = int(os.environ.get("PORT", "10000"))
-
 TARGET_MODEL = os.environ.get("MODEL_NAME") or "super-decider"
+ASI_DEBUG = os.environ.get("ASI_DEBUG", "false").strip().lower() in {"1", "true", "yes", "on"}
+# Full prompt/response text may contain private Telegram messages. Only enable
+# content logging temporarily when needed; never log API keys or auth headers.
+ASI_DEBUG_LOG_CONTENT = os.environ.get("ASI_DEBUG_LOG_CONTENT", "false").strip().lower() in {"1", "true", "yes", "on"}
+ASI_BASE_URL = "https://inference.asicloud.cudos.org/v1"
 
-print(f"🔌 Initializing ASI:Cloud client with OpenAI-compatible endpoint | Model: {TARGET_MODEL}", flush=True)
+print(f"🔌 Initializing ASI:Cloud client | Model: {TARGET_MODEL} | Debug: {ASI_DEBUG}", flush=True)
 
 client = AsyncOpenAI(
-    base_url="https://inference.asicloud.cudos.org/v1",
+    base_url=ASI_BASE_URL,
     api_key=API_KEY,
     timeout=45.0,
 )
+
+
+def _asi_debug(event: str, details: dict) -> None:
+    """Emit opt-in ASI diagnostics without exposing credentials."""
+    if ASI_DEBUG:
+        print(f"[ASI DEBUG] {event}: {json.dumps(details, ensure_ascii=False, default=str)}", flush=True)
 
 
 def normalize_reply_text(value):
@@ -67,16 +75,53 @@ def normalize_reply_text(value):
 
 
 async def _request_rcn_inference(user_id: str, prompt: str) -> str:
-    """Send a standard OpenAI-compatible chat-completion request to ASI:Cloud."""
-    response = await client.chat.completions.create(
-        model=TARGET_MODEL,
-        messages=[{"role": "user", "content": prompt}],
-    )
+    """Send an OpenAI-compatible chat-completion request to ASI:Cloud."""
+    messages = [{"role": "user", "content": prompt}]
+    request_info = {
+        "method": "POST",
+        "endpoint": f"{ASI_BASE_URL}/chat/completions",
+        "model": TARGET_MODEL,
+        "message_count": len(messages),
+        "messages": [
+            {
+                "role": message["role"],
+                "content_length": len(message["content"]),
+                **({"content": message["content"]} if ASI_DEBUG_LOG_CONTENT else {}),
+            }
+            for message in messages
+        ],
+    }
+    _asi_debug("request", request_info)
+
+    try:
+        response = await client.chat.completions.create(
+            model=TARGET_MODEL,
+            messages=messages,
+        )
+    except Exception as exc:
+        error_info = {
+            "exception_type": type(exc).__name__,
+            "status_code": getattr(exc, "status_code", None),
+            "code": getattr(exc, "code", None),
+            "message": str(exc),
+        }
+        _asi_debug("request_failed", error_info)
+        raise
 
     if not response.choices:
+        _asi_debug("empty_response", {"response_id": getattr(response, "id", None)})
         raise RuntimeError("ASI:Cloud Super-Decider returned no completion choices.")
 
     raw_content = response.choices[0].message.content
+    _asi_debug("response", {
+        "response_id": getattr(response, "id", None),
+        "model": getattr(response, "model", None),
+        "choices": len(response.choices),
+        "finish_reason": response.choices[0].finish_reason,
+        "content_length": len(raw_content) if isinstance(raw_content, str) else None,
+        **({"content": raw_content} if ASI_DEBUG_LOG_CONTENT else {}),
+    })
+
     if raw_content is None:
         return ""
 
