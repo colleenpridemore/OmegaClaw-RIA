@@ -25,9 +25,9 @@ except ImportError:
     def unbranded_witness(func):
         return func
 
-ASI1_API_KEY = os.environ.get("ASI1_API_KEY")
-if not ASI1_API_KEY:
-    raise RuntimeError("ASI1_API_KEY is not set. Please configure it in the deployment environment.")
+ASI_API_KEY = os.environ.get("ASI_API_KEY")
+if not ASI_API_KEY:
+    raise RuntimeError("ASI_API_KEY is not set. Please configure it in the deployment environment.")
 
 TELEGRAM_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
 if not TELEGRAM_TOKEN:
