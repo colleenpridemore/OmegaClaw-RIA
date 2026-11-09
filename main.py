@@ -65,21 +65,61 @@ def normalize_reply_text(value):
 
 
 async def _request_rcn_inference(user_id: str, prompt: str) -> str:
-  """Format free-form chat into Super-Decider's required JSON decision structure."""
+  """Format Telegram chat into Super-Decider's required questions/state JSON schema."""
 
-  # Define the required system schema expecting a decision response
+  # 1. System message: JSON schema containing a "questions" array
   system_schema = json.dumps({
       "type": "object",
       "properties": {
-          "response_text": {
-              "type": "string",
-              "description": (
-                  "The conversational or reasoned response from @aethel."
-              ),
+          "questions": {
+              "type": "array",
+              "items": {
+                  "type": "object",
+                  "properties": {
+                      "id": {"type": "string"},
+                      "text": {"type": "string"},
+                  },
+              },
           }
       },
-      "required": ["response_text"],
+      "required": ["questions"],
   })
+
+  # 2. User message: State object and the questions array payload
+  user_state_payload = json.dumps({
+      "state": {
+          "user_id": user_id,
+          "context": "RIAClaw Relational Conditioning Node (RCN)",
+      },
+      "questions": [{"id": "q1", "text": prompt}],
+  })
+
+  response = await client.chat.completions.create(
+      model=TARGET_MODEL,
+      messages=[
+          {"role": "system", "content": system_schema},
+          {"role": "user", "content": user_state_payload},
+      ],
+  )
+  if not response.choices:
+    raise RuntimeError("Super-Decider returned no completion choices.")
+
+  raw_content = response.choices[0].message.content
+
+  # Parse the decision payload returned by Super-Decider
+  try:
+    parsed_json = json.loads(raw_content)
+    # Extract answers or fall back to raw string content
+    if "answers" in parsed_json:
+      actual_reply = str(parsed_json["answers"])
+    elif "decisions" in parsed_json:
+      actual_reply = str(parsed_json["decisions"])
+    else:
+      actual_reply = raw_content
+  except json.JSONDecodeError:
+    actual_reply = raw_content
+
+  return normalize_reply_text(actual_reply)
 
   # Wrap the user's prompt as a JSON state payload
   user_state_payload = json.dumps(
