@@ -20,26 +20,42 @@ from telegram.ext import ApplicationBuilder
 # 1. Safety Layer & ASI:Cloud Client Initialization
 # -------------------------------------------------------------------------
 try:
-    from unbranded_safety import unbranded_witness
+  from unbranded_safety import unbranded_witness
 except ImportError:
-    def unbranded_witness(func):
-        return func
 
-# Match Render's OPENAI_API_KEY variable
+  def unbranded_witness(func):
+    return func
+
+
 API_KEY = os.environ.get("OPENAI_API_KEY")
 if not API_KEY:
-    raise RuntimeError("OPENAI_API_KEY is not set. Please configure it in the deployment environment.")
+  raise RuntimeError(
+      "OPENAI_API_KEY is not set. Please configure it in the deployment"
+      " environment."
+  )
 
 TELEGRAM_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
 if not TELEGRAM_TOKEN:
-    raise RuntimeError("TELEGRAM_BOT_TOKEN is not set. Please configure it in the deployment environment.")
+  raise RuntimeError(
+      "TELEGRAM_BOT_TOKEN is not set. Please configure it in the deployment"
+      " environment."
+  )
 
 WEBHOOK_URL = os.environ.get("WEBHOOK_URL")
 PORT = int(os.environ.get("PORT", "10000"))
 
-# Pull base URL and model name dynamically from Render environment variables
-ASI_BASE_URL = os.environ.get("ASI_BASE_URL", "https://inference.asicloud.cudos.org/v1")
-TARGET_MODEL = os.environ.get("MODEL_NAME", "super-decider")
+# Guard against empty strings in Render env vars with 'or'
+ASI_BASE_URL = (
+    os.environ.get("ASI_BASE_URL")
+    or "https://inference.asicloud.cudos.org/v1"
+)
+TARGET_MODEL = os.environ.get("MODEL_NAME") or "super-decider"
+
+print(
+    f"🔌 Initializing ASI:Cloud client | Endpoint: {ASI_BASE_URL} | Model:"
+    f" {TARGET_MODEL}",
+    flush=True,
+)
 
 client = AsyncOpenAI(
     base_url=ASI_BASE_URL,
