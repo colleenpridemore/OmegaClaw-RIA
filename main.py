@@ -47,6 +47,7 @@ client = AsyncOpenAI(
     timeout=45.0,
 )
 
+
 def normalize_reply_text(value):
     """Normalize model output to a Telegram-safe string."""
     if value is None:
@@ -66,8 +67,7 @@ def normalize_reply_text(value):
 
 async def _request_rcn_inference(user_id: str, prompt: str) -> str:
     """Format Telegram chat into Super-Decider's required questions/state JSON schema."""
-    
-    # 1. System message: JSON schema containing a "questions" array
+
     system_schema = json.dumps({
         "type": "object",
         "properties": {
@@ -77,26 +77,25 @@ async def _request_rcn_inference(user_id: str, prompt: str) -> str:
                     "type": "object",
                     "properties": {
                         "id": {"type": "string"},
-                        "text": {"type": "string"}
-                    }
-                }
+                        "text": {"type": "string"},
+                    },
+                },
             }
         },
-        "required": ["questions"]
+        "required": ["questions"],
     })
 
-    # 2. User message: State object and the questions array payload
     user_state_payload = json.dumps({
         "state": {
             "user_id": user_id,
-            "context": "RIAClaw Relational Conditioning Node (RCN)"
+            "context": "RIAClaw Relational Conditioning Node (RCN)",
         },
         "questions": [
             {
                 "id": "q1",
-                "text": prompt
+                "text": prompt,
             }
-        ]
+        ],
     })
 
     response = await client.chat.completions.create(
@@ -104,72 +103,36 @@ async def _request_rcn_inference(user_id: str, prompt: str) -> str:
         messages=[
             {
                 "role": "system",
-                "content": system_schema
+                "content": system_schema,
             },
             {
                 "role": "user",
-                "content": user_state_payload
-            }
+                "content": user_state_payload,
+            },
         ],
     )
-    
-    if not response.choices:
-        raise RuntimeError("Super-Decider returned no completion choices.")
 
-    raw_content = response.choices[0].message.content
-
-    # Parse the decision payload returned by Super-Decider
-    try:
-        parsed_json = json.loads(raw_content)
-        if "answers" in parsed_json:
-            actual_reply = str(parsed_json["answers"])
-        elif "decisions" in parsed_json:
-            actual_reply = str(parsed_json["decisions"])
-        elif "response_text" in parsed_json:
-            actual_reply = str(parsed_json["response_text"])
-        else:
-            actual_reply = raw_content
-    except json.JSONDecodeError:
-        actual_reply = raw_content
-
-    return normalize_reply_text(actual_reply)
-
-  # Wrap the user's prompt as a JSON state payload
-  user_state_payload = json.dumps(
-      {
-          "user_id": user_id,
-          "query": prompt,
-          "context": (
-              "RIAClaw Relational Conditioning Node (RCN) non-extractive safety"
-              " mode."
-          ),
-      }
-  )
-
-  response = await client.chat.completions.create(
-      model=TARGET_MODEL,
-      messages=[
-          {"role": "system", "content": system_schema},
-          {"role": "user", "content": user_state_payload},
-      ],
-  )
-  if not response.choices:
-    raise RuntimeError("Super-Decider returned no completion choices.")
-
-  raw_content = response.choices[0].message.content
-
-  # Parse the structured JSON response back out for Telegram
-  try:
-    parsed_json = json.loads(raw_content)
-    actual_reply = parsed_json.get("response_text", raw_content)
-  except json.JSONDecodeError:
-    actual_reply = raw_content
-
-  return normalize_reply_text(actual_reply)
     if not response.choices:
         raise RuntimeError("ASI:Cloud Super-Decider returned no completion choices.")
-    return normalize_reply_text(response.choices[0].message.content)
-    
+
+    raw_content = response.choices[0].message.content
+    if raw_content is None:
+        return ""
+
+    try:
+        parsed_json = json.loads(raw_content)
+    except (TypeError, ValueError):
+        return normalize_reply_text(raw_content)
+
+    if isinstance(parsed_json, dict):
+        for key in ("answer", "answers", "decision", "decisions", "response_text", "text"):
+            if key in parsed_json:
+                return normalize_reply_text(parsed_json[key])
+        return normalize_reply_text(str(parsed_json))
+
+    return normalize_reply_text(parsed_json)
+
+
 @unbranded_witness
 async def run_rcn_inference(user_id: str, prompt: str):
     """Route a Telegram query through async-compatible safety middleware."""
