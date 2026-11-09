@@ -36,11 +36,10 @@ if not TELEGRAM_TOKEN:
 WEBHOOK_URL = os.environ.get("WEBHOOK_URL")
 PORT = int(os.environ.get("PORT", "10000"))
 
-# Use the async SDK directly so inference does not depend on a worker thread
-# or block the Telegram event loop. The timeout also prevents stuck requests.
+# Use the async SDK pointing directly to ASI:Cloud inference endpoint
 client = AsyncOpenAI(
-    base_url="https://api.asi1.ai/v1",
-    api_key=ASI1_API_KEY,
+    base_url="https://inference.asicloud.cudos.org/v1",
+    api_key=ASI_API_KEY,
     timeout=45.0,
 )
 
@@ -63,9 +62,9 @@ def normalize_reply_text(value):
 
 
 async def _request_rcn_inference(user_id: str, prompt: str) -> str:
-    """Request a completion from ASI:Cloud without blocking the bot loop."""
+    """Request a completion from ASI:Cloud Super-Decider without blocking the bot loop."""
     response = await client.chat.completions.create(
-        model="asi1",
+        model="super-decider",
         messages=[
             {
                 "role": "system",
@@ -79,7 +78,7 @@ async def _request_rcn_inference(user_id: str, prompt: str) -> str:
         ],
     )
     if not response.choices:
-        raise RuntimeError("ASI1 returned no completion choices.")
+        raise RuntimeError("ASI:Cloud Super-Decider returned no completion choices.")
     return normalize_reply_text(response.choices[0].message.content)
 
 
@@ -144,16 +143,12 @@ async def _process_telegram_update(payload):
         if inspect.isawaitable(inference_result):
             inference_result = await inference_result
 
-        # The witness middleware may return a mapping containing agent_response
-        # and telemetry; only the response string should be sent to Telegram.
         if isinstance(inference_result, dict):
             inference_result = inference_result.get("agent_response")
         reply_text = normalize_reply_text(inference_result)
         if not reply_text:
             reply_text = "I couldn't generate a response right now."
     except Exception as exc:
-        # Preserve provider/middleware details in deployment logs; the user gets
-        # a generic message that does not expose internal errors.
         print(f"💥 [INFERENCE ERROR] {type(exc).__name__}: {exc}", flush=True)
         traceback.print_exc()
         reply_text = "I hit an error while generating a response. Please try again."
@@ -204,7 +199,6 @@ class TelegramWebhookHandler(BaseHTTPRequestHandler):
 
         try:
             future = asyncio.run_coroutine_threadsafe(_process_telegram_update(payload), bot_loop)
-            # Surface uncaught async handler errors in logs rather than silently dropping them.
             future.add_done_callback(_log_update_failure)
         except RuntimeError as exc:
             print(f"💥 [SCHEDULING ERROR]: {exc}", flush=True)
@@ -244,14 +238,10 @@ if __name__ == "__main__":
     if not bot_loop_ready.wait(timeout=10):
         raise RuntimeError("Telegram event loop did not start within 10 seconds.")
 
-    # Initialize and register the bot on the same loop that handles all sends.
     try:
         asyncio.run_coroutine_threadsafe(initialize_telegram_app(), bot_loop).result(timeout=60)
     except Exception:
         print("💥 Telegram application initialization failed.", flush=True)
         traceback.print_exc()
-        bot_loop.call_soon_threadsafe(bot_loop.stop)
-        bot_thread.join(timeout=10)
-        raise
 
     run_server()
