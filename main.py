@@ -65,21 +65,54 @@ def normalize_reply_text(value):
 
 
 async def _request_rcn_inference(user_id: str, prompt: str) -> str:
-    """Request a completion from ASI:Cloud Super-Decider without blocking the bot loop."""
-    response = await client.chat.completions.create(
-        model=TARGET_MODEL,
-        messages=[
-            {
-                "role": "system",
-                "content": (
-                    "You are @aethel, operating through the RIAClaw Relational Conditioning Node (RCN). "
-                    "Maintain non-extractive safety, relational agency, zero pathologizing, "
-                    "and zero-ownership witness logging."
-                ),
-            },
-            {"role": "user", "content": prompt},
-        ],
-    )
+  """Format free-form chat into Super-Decider's required JSON decision structure."""
+
+  # Define the required system schema expecting a decision response
+  system_schema = json.dumps({
+      "type": "object",
+      "properties": {
+          "response_text": {
+              "type": "string",
+              "description": (
+                  "The conversational or reasoned response from @aethel."
+              ),
+          }
+      },
+      "required": ["response_text"],
+  })
+
+  # Wrap the user's prompt as a JSON state payload
+  user_state_payload = json.dumps(
+      {
+          "user_id": user_id,
+          "query": prompt,
+          "context": (
+              "RIAClaw Relational Conditioning Node (RCN) non-extractive safety"
+              " mode."
+          ),
+      }
+  )
+
+  response = await client.chat.completions.create(
+      model=TARGET_MODEL,
+      messages=[
+          {"role": "system", "content": system_schema},
+          {"role": "user", "content": user_state_payload},
+      ],
+  )
+  if not response.choices:
+    raise RuntimeError("Super-Decider returned no completion choices.")
+
+  raw_content = response.choices[0].message.content
+
+  # Parse the structured JSON response back out for Telegram
+  try:
+    parsed_json = json.loads(raw_content)
+    actual_reply = parsed_json.get("response_text", raw_content)
+  except json.JSONDecodeError:
+    actual_reply = raw_content
+
+  return normalize_reply_text(actual_reply)
     if not response.choices:
         raise RuntimeError("ASI:Cloud Super-Decider returned no completion choices.")
     return normalize_reply_text(response.choices[0].message.content)
