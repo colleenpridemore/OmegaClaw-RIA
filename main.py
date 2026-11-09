@@ -25,9 +25,10 @@ except ImportError:
     def unbranded_witness(func):
         return func
 
-ASI_API_KEY = os.environ.get("ASI_API_KEY")
-if not ASI_API_KEY:
-    raise RuntimeError("ASI_API_KEY is not set. Please configure it in the deployment environment.")
+# Match Render's OPENAI_API_KEY variable
+API_KEY = os.environ.get("OPENAI_API_KEY")
+if not API_KEY:
+    raise RuntimeError("OPENAI_API_KEY is not set. Please configure it in the deployment environment.")
 
 TELEGRAM_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
 if not TELEGRAM_TOKEN:
@@ -36,10 +37,13 @@ if not TELEGRAM_TOKEN:
 WEBHOOK_URL = os.environ.get("WEBHOOK_URL")
 PORT = int(os.environ.get("PORT", "10000"))
 
-# Use the async SDK pointing directly to ASI:Cloud inference endpoint
+# Pull base URL and model name dynamically from Render environment variables
+ASI_BASE_URL = os.environ.get("ASI_BASE_URL", "https://inference.asicloud.cudos.org/v1")
+TARGET_MODEL = os.environ.get("MODEL_NAME", "super-decider")
+
 client = AsyncOpenAI(
-    base_url="https://inference.asicloud.cudos.org/v1",
-    api_key=ASI_API_KEY,
+    base_url=ASI_BASE_URL,
+    api_key=API_KEY,
     timeout=45.0,
 )
 
