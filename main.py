@@ -37,8 +37,6 @@ WEBHOOK_URL = os.environ.get("WEBHOOK_URL")
 PORT = int(os.environ.get("PORT", "10000"))
 TARGET_MODEL = os.environ.get("MODEL_NAME") or "super-decider"
 ASI_DEBUG = os.environ.get("ASI_DEBUG", "false").strip().lower() in {"1", "true", "yes", "on"}
-# Full prompt/response text may contain private Telegram messages. Only enable
-# content logging temporarily when needed; never log API keys or auth headers.
 ASI_DEBUG_LOG_CONTENT = os.environ.get("ASI_DEBUG_LOG_CONTENT", "false").strip().lower() in {"1", "true", "yes", "on"}
 ASI_BASE_URL = "https://inference.asicloud.cudos.org/v1"
 
@@ -74,9 +72,46 @@ def normalize_reply_text(value):
     return str(value).strip()
 
 
+def _build_structured_question_messages(user_id: str, prompt: str):
+    """Convert a Telegram user message into the exact schema ASI:Cloud requires."""
+    system_schema = json.dumps({
+        "type": "object",
+        "properties": {
+            "questions": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "id": {"type": "string"},
+                        "text": {"type": "string"},
+                    },
+                    "required": ["id", "text"],
+                },
+            }
+        },
+        "required": ["questions"],
+    })
+
+    user_state_payload = json.dumps({
+        "state": {
+            "user_id": user_id,
+            "context": "RIAClaw Relational Conditioning Node (RCN) non-extractive safety mode",
+            "conversation_mode": "telegram",
+        },
+        "questions": [
+            {"id": "q1", "text": prompt}
+        ],
+    })
+
+    return [
+        {"role": "system", "content": system_schema},
+        {"role": "user", "content": user_state_payload},
+    ]
+
+
 async def _request_rcn_inference(user_id: str, prompt: str) -> str:
-    """Send an OpenAI-compatible chat-completion request to ASI:Cloud."""
-    messages = [{"role": "user", "content": prompt}]
+    """Send a structured decision-question request to ASI:Cloud."""
+    messages = _build_structured_question_messages(user_id, prompt)
     request_info = {
         "method": "POST",
         "endpoint": f"{ASI_BASE_URL}/chat/completions",
@@ -125,7 +160,6 @@ async def _request_rcn_inference(user_id: str, prompt: str) -> str:
     if raw_content is None:
         return ""
 
-    # Accept plain-text completions and common JSON-wrapped response formats.
     try:
         parsed_json = json.loads(raw_content)
     except (TypeError, ValueError):
@@ -136,7 +170,7 @@ async def _request_rcn_inference(user_id: str, prompt: str) -> str:
             if key in parsed_json:
                 return normalize_reply_text(parsed_json[key])
 
-    return normalize_reply_text(raw_content)
+    return normalize_reply_text(parsed_json)
 
 
 @unbranded_witness
