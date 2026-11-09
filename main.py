@@ -25,9 +25,11 @@ except ImportError:
     def unbranded_witness(func):
         return func
 
-API_KEY = os.environ.get("OPENAI_API_KEY")
+# ASI:Cloud's account example uses ASI_API_KEY. Keep OPENAI_API_KEY as a
+# backwards-compatible fallback for existing deployments.
+API_KEY = os.environ.get("ASI_API_KEY") or os.environ.get("OPENAI_API_KEY")
 if not API_KEY:
-    raise RuntimeError("OPENAI_API_KEY is not set. Please configure it in the deployment environment.")
+    raise RuntimeError("ASI_API_KEY is not set. Please configure it in the deployment environment.")
 
 TELEGRAM_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
 if not TELEGRAM_TOKEN:
@@ -38,9 +40,8 @@ PORT = int(os.environ.get("PORT", "10000"))
 
 TARGET_MODEL = os.environ.get("MODEL_NAME") or "super-decider"
 
-print(f"🔌 Initializing ASI:Cloud client with hardcoded endpoint | Model: {TARGET_MODEL}", flush=True)
+print(f"🔌 Initializing ASI:Cloud client with OpenAI-compatible endpoint | Model: {TARGET_MODEL}", flush=True)
 
-# Hardcode the protocol and URL directly so it can NEVER be missing a protocol
 client = AsyncOpenAI(
     base_url="https://inference.asicloud.cudos.org/v1",
     api_key=API_KEY,
@@ -66,50 +67,10 @@ def normalize_reply_text(value):
 
 
 async def _request_rcn_inference(user_id: str, prompt: str) -> str:
-    """Format Telegram chat into Super-Decider's required questions/state JSON schema."""
-
-    system_schema = json.dumps({
-        "type": "object",
-        "properties": {
-            "questions": {
-                "type": "array",
-                "items": {
-                    "type": "object",
-                    "properties": {
-                        "id": {"type": "string"},
-                        "text": {"type": "string"},
-                    },
-                },
-            }
-        },
-        "required": ["questions"],
-    })
-
-    user_state_payload = json.dumps({
-        "state": {
-            "user_id": user_id,
-            "context": "RIAClaw Relational Conditioning Node (RCN)",
-        },
-        "questions": [
-            {
-                "id": "q1",
-                "text": prompt,
-            }
-        ],
-    })
-
+    """Send a standard OpenAI-compatible chat-completion request to ASI:Cloud."""
     response = await client.chat.completions.create(
         model=TARGET_MODEL,
-        messages=[
-            {
-                "role": "system",
-                "content": system_schema,
-            },
-            {
-                "role": "user",
-                "content": user_state_payload,
-            },
-        ],
+        messages=[{"role": "user", "content": prompt}],
     )
 
     if not response.choices:
@@ -119,6 +80,7 @@ async def _request_rcn_inference(user_id: str, prompt: str) -> str:
     if raw_content is None:
         return ""
 
+    # Accept plain-text completions and common JSON-wrapped response formats.
     try:
         parsed_json = json.loads(raw_content)
     except (TypeError, ValueError):
@@ -128,9 +90,8 @@ async def _request_rcn_inference(user_id: str, prompt: str) -> str:
         for key in ("answer", "answers", "decision", "decisions", "response_text", "text"):
             if key in parsed_json:
                 return normalize_reply_text(parsed_json[key])
-        return normalize_reply_text(str(parsed_json))
 
-    return normalize_reply_text(parsed_json)
+    return normalize_reply_text(raw_content)
 
 
 @unbranded_witness
