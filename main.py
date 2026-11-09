@@ -68,7 +68,7 @@ def normalize_reply_text(value):
 async def _request_rcn_inference(user_id: str, prompt: str) -> str:
     """Request a completion from ASI:Cloud Super-Decider without blocking the bot loop."""
     response = await client.chat.completions.create(
-        model="super-decider",
+        model=TARGET_MODEL,
         messages=[
             {
                 "role": "system",
@@ -84,8 +84,7 @@ async def _request_rcn_inference(user_id: str, prompt: str) -> str:
     if not response.choices:
         raise RuntimeError("ASI:Cloud Super-Decider returned no completion choices.")
     return normalize_reply_text(response.choices[0].message.content)
-
-
+    
 @unbranded_witness
 async def run_rcn_inference(user_id: str, prompt: str):
     """Route a Telegram query through async-compatible safety middleware."""
