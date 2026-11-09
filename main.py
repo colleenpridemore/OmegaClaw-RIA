@@ -20,49 +20,32 @@ from telegram.ext import ApplicationBuilder
 # 1. Safety Layer & ASI:Cloud Client Initialization
 # -------------------------------------------------------------------------
 try:
-  from unbranded_safety import unbranded_witness
+    from unbranded_safety import unbranded_witness
 except ImportError:
-
-  def unbranded_witness(func):
-    return func
-
+    def unbranded_witness(func):
+        return func
 
 API_KEY = os.environ.get("OPENAI_API_KEY")
 if not API_KEY:
-  raise RuntimeError(
-      "OPENAI_API_KEY is not set. Please configure it in the deployment"
-      " environment."
-  )
+    raise RuntimeError("OPENAI_API_KEY is not set. Please configure it in the deployment environment.")
 
 TELEGRAM_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
 if not TELEGRAM_TOKEN:
-  raise RuntimeError(
-      "TELEGRAM_BOT_TOKEN is not set. Please configure it in the deployment"
-      " environment."
-  )
+    raise RuntimeError("TELEGRAM_BOT_TOKEN is not set. Please configure it in the deployment environment.")
 
 WEBHOOK_URL = os.environ.get("WEBHOOK_URL")
 PORT = int(os.environ.get("PORT", "10000"))
 
-# Guard against empty strings in Render env vars with 'or'
-ASI_BASE_URL = (
-    os.environ.get("ASI_BASE_URL")
-    or "https://inference.asicloud.cudos.org/v1"
-)
 TARGET_MODEL = os.environ.get("MODEL_NAME") or "super-decider"
 
-print(
-    f"🔌 Initializing ASI:Cloud client | Endpoint: {ASI_BASE_URL} | Model:"
-    f" {TARGET_MODEL}",
-    flush=True,
-)
+print(f"🔌 Initializing ASI:Cloud client with hardcoded endpoint | Model: {TARGET_MODEL}", flush=True)
 
+# Hardcode the protocol and URL directly so it can NEVER be missing a protocol
 client = AsyncOpenAI(
-    base_url=ASI_BASE_URL,
+    base_url="https://inference.asicloud.cudos.org/v1",
     api_key=API_KEY,
     timeout=45.0,
 )
-
 
 def normalize_reply_text(value):
     """Normalize model output to a Telegram-safe string."""
